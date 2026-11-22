@@ -1,0 +1,53 @@
+// Planet Bonk — 오프라인 캐시
+const CACHE = 'pb-v1';
+const ASSETS = [
+  './',
+  './index.html',
+  './settings.js',
+  './manifest.json',
+  './icon-180.png',
+  './icon-192.png',
+  './icon-512.png',
+  './icon-512-maskable.png'
+];
+
+self.addEventListener('install', e => {
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', e => {
+  e.waitUntil(
+    caches.keys().then(keys =>
+      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
+    )
+  );
+  self.clients.claim();
+});
+
+// HTML·JS는 네트워크 우선(최신 코드 반영), 나머지는 캐시 우선
+self.addEventListener('fetch', e => {
+  const req = e.request;
+  const isHTML = req.mode === 'navigate' || (req.headers.get('accept')||'').includes('text/html');
+  const isJS = new URL(req.url).pathname.endsWith('.js');
+  if (isHTML || isJS) {
+    e.respondWith(
+      fetch(req).then(res => {
+        const copy = res.clone();
+        caches.open(CACHE).then(c => c.put(req, copy)).catch(()=>{});
+        return res;
+      }).catch(() => caches.match(req).then(hit => hit || caches.match('./index.html')))
+    );
+    return;
+  }
+  e.respondWith(
+    caches.match(req).then(hit => {
+      if (hit) return hit;
+      return fetch(req).then(res => {
+        const copy = res.clone();
+        caches.open(CACHE).then(c => c.put(req, copy)).catch(()=>{});
+        return res;
+      }).catch(() => caches.match('./index.html'));
+    })
+  );
+});

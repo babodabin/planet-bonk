@@ -1,0 +1,1181 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Planet Bonk</title>
+<meta name="description" content="같은 행성끼리 부딪혀 작게 만들고, 달끼리 부딪혀 없애는 우주 게임">
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-title" content="Planet Bonk">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#000000">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { height:100%; overflow:hidden; background:#000; }
+  body {
+    font-family:'Special Elite', monospace;
+    touch-action:none; user-select:none; -webkit-user-select:none;
+    color:#9a9f9f;
+  }
+  #wrap {
+    position:fixed; inset:0; display:flex; flex-direction:column;
+    padding-top:max(env(safe-area-inset-top, 0px), 52px);
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  #field-area {
+    flex:1; min-height:0; margin:10px 8px 6px 8px;
+    display:flex; justify-content:center; align-items:flex-end;
+  }
+  #field-box {
+    flex:none; position:relative;
+    border:2px solid rgba(255,255,255,0.85);
+    border-radius:6px;
+    box-shadow:0 0 18px rgba(255,255,255,0.35), inset 0 0 14px rgba(255,255,255,0.12);
+    overflow:hidden;
+  }
+  #game { position:absolute; inset:0; width:100%; height:100%; display:block; }
+
+  #bottom-bar {
+    height:96px; position:relative;
+    display:flex; align-items:flex-start; justify-content:space-between;
+    padding:14px 16px 0 16px;
+    color:#9a9f9f;
+    font-size:clamp(14px, 4vw, 18px);
+    letter-spacing:0.12em;
+  }
+  #next-area { display:flex; flex-direction:column; gap:6px; }
+  #next-queue { display:flex; gap:7px; margin-top:4px; align-items:center; }
+  .q-ball { width:32px; height:32px; display:block; }
+  #right-area { text-align:right; display:flex; flex-direction:column; gap:8px; align-items:flex-end; }
+  #menu-btn, #settings-btn { cursor:pointer; }
+  #menu-btn:active, #settings-btn:active { color:#fff; }
+
+  #launcher {
+    position:absolute; left:50%; top:-22px; transform:translateX(-50%);
+    width:44px; height:44px; border-radius:50%;
+    border:2.5px solid rgba(255,255,255,0.9);
+    box-shadow:0 0 10px rgba(255,255,255,0.5);
+    display:flex; align-items:center; justify-content:center;
+    background:#000;
+  }
+  #launcher .q-ball { width:38px; height:38px; }
+  #launcher-name {
+    position:absolute; top:47px; left:50%; transform:translateX(-50%);
+    font-family:-apple-system,'Apple SD Gothic Neo',sans-serif;
+    font-size:13px; letter-spacing:0.08em; white-space:nowrap;
+    text-shadow:0 0 6px currentColor;
+  }
+
+  #overlay {
+    position:fixed; inset:0; z-index:10;
+    display:flex; flex-direction:column; justify-content:center; align-items:center; gap:20px;
+    background:rgba(0,0,0,0.6);   /* 반투명: 뒤의 우주가 비침 */
+    transition:opacity .3s ease;
+  }
+  #overlay.hidden { opacity:0; pointer-events:none; }
+  #overlay h1 {
+    font-weight:400; color:#e8eaea;
+    font-size:clamp(30px, 8.5vw, 52px);
+    letter-spacing:0.1em; text-align:center;
+    text-shadow:0 0 14px rgba(255,255,255,0.35);
+  }
+  #overlay .stats { font-size:clamp(16px, 4.5vw, 22px); letter-spacing:0.15em; text-align:center; line-height:1.9; color:#9a9f9f; }
+  #overlay .hint {
+    font-family:-apple-system,'Apple SD Gothic Neo',sans-serif;
+    font-size:clamp(12px, 3.4vw, 14px); color:#6c7171;
+    text-align:center; line-height:1.7; max-width:290px;
+  }
+  #overlay button {
+    font-family:'Special Elite','Apple SD Gothic Neo',-apple-system,sans-serif;
+    font-size:clamp(15px, 3.6vw, 18px); letter-spacing:0.14em;
+    color:#000; background:#e8eaea;
+    border:none; border-radius:4px;
+    padding:11px 34px; cursor:pointer;
+    box-shadow:0 0 16px rgba(255,255,255,0.4);
+  }
+  #overlay button:active { transform:translateY(2px); }
+  #overlay button.secondary {
+    font-size:clamp(11px,2.8vw,13px); letter-spacing:0.1em;
+    color:#7a8080; background:none; border:1px solid #3a3f3f;
+    padding:7px 18px; box-shadow:none; margin-top:14px;
+  }
+  #overlay button.secondary:active { transform:translateY(1px); color:#aab0b0; }
+  #overlay { gap:8px; }
+  #classic-link {
+    color:#6c7171; font-size:clamp(13px,3.8vw,16px); letter-spacing:0.15em;
+    text-decoration:none; cursor:pointer;
+  }
+  #classic-link:active { color:#fff; }
+  .ov-links { order:4; display:flex; gap:22px; margin-top:22px; }
+  .ov-links span {
+    color:#9a9f9f; font-size:clamp(13px,3.8vw,16px); letter-spacing:0.15em; cursor:pointer;
+    border-bottom:1px solid #3a3f3f; padding-bottom:2px;
+  }
+  .ov-links span:active { color:#fff; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="field-area">
+    <div id="field-box">
+      <canvas id="game"></canvas>
+    </div>
+  </div>
+  <div id="bottom-bar">
+    <div id="next-area">
+      <div>NEXT</div>
+      <div id="next-queue"></div>
+    </div>
+    <div id="launcher"><canvas class="q-ball" id="launcher-ball"></canvas><div id="launcher-name"></div></div>
+    <div id="right-area">
+      <div id="record-label">RECORD&nbsp;&nbsp;0</div>
+      <div id="settings-btn">SETTINGS</div>
+      <div id="menu-btn">MENU</div>
+    </div>
+  </div>
+</div>
+
+<div id="overlay">
+  <h1>PLANET BONK</h1>
+  <div class="stats" id="overlay-stats" style="display:none"></div>
+  <div class="hint" id="overlay-hint" style="display:none"></div>
+  <button id="start-btn">START</button>
+  <button id="resume-btn" style="display:none;">CONTINUE</button>
+  <div class="ov-links">
+    <span id="help-link">HOW&nbsp;TO&nbsp;PLAY</span>
+    <span id="settings-link">SETTINGS</span>
+  </div>
+</div>
+
+<script>
+// 오프라인 실행 (PWA)
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  });
+}
+</script>
+<script src="settings.js"></script>
+<script>
+(function(){
+  // ───────── 행성 정의 (크기 순) ─────────
+  // size: 기본 반지름 배율 — 규칙: 한 단계마다 약 1.21배씩 커짐 (태양만 특별히 큼)
+  // 같은 행성끼리 부딪히면 tier-1로 축소, tier 0(달)끼리는 소멸
+  // color: 불꽃·후광·이름표에 쓰는 대표색 (행성 그림 자체는 makeTexture에서 그림)
+  const PLANETS=[
+    {name:'달',     color:'#e6e9ef', size:0.60},
+    {name:'수성',   color:'#b39a84', size:0.73},
+    {name:'화성',   color:'#e8602f', size:0.88},
+    {name:'금성',   color:'#f2c46d', size:1.06},
+    {name:'지구',   color:'#4a90ee', size:1.29},
+    {name:'해왕성', color:'#5c7cf0', size:1.56},
+    {name:'천왕성', color:'#8ee3ef', size:1.88},
+    {name:'토성',   color:'#ead39c', size:2.28},
+    {name:'목성',   color:'#dda56c', size:2.76},
+    {name:'태양',   color:'#ffd23b', size:4.50}
+  ];
+
+  const FRICTION_KEEP = 0.988;
+  const FRICTION_SUB = 0.028;
+  const STOP_SPEED = 0.05;
+  const EDGE = 2.4;            // 테두리 선 두께 보정(시각적으로 표면이 맞닿게)
+  const RESTITUTION = 1.0;
+  const WALL_BOUNCE = 0.95;
+  const MAX_POWER = 13;
+  const POP_RANGE = 1.05;      // 원조: 거의 딱 붙어야(직접 맞혀야) 반응
+  const POP_TICK = 8;
+  const POP_MIN_SPEED = 1.2;   // 이 속도 이상 부딪힐 때만 축소 (가만히 붙어있으면 안 됨)
+
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const fieldBox = document.getElementById('field-box');
+  const nextQueueEl = document.getElementById('next-queue');
+  const launcherBallEl = document.getElementById('launcher-ball');
+  const recordLabel = document.getElementById('record-label');
+  const menuBtn = document.getElementById('menu-btn');
+  const settingsBtn = document.getElementById('settings-btn');
+  const overlay = document.getElementById('overlay');
+  const overlayTitle = document.querySelector('#overlay h1');
+  const overlayStats = document.getElementById('overlay-stats');
+  const overlayHint = document.getElementById('overlay-hint');
+  const startBtn = document.getElementById('start-btn');
+
+  // 논리 필드 크기 고정: 속도·마찰이 픽셀 단위라, 화면 크기를 따라가면 기기마다 난이도가 달라짐
+  const W=360, H=640;
+  const BALL_R = Math.max(15, Math.min(W,H)*0.055);
+  const BORDER = 2;
+  const fieldArea = document.getElementById('field-area');
+  let DPR=1, SCALE=1;
+  function resize(){
+    DPR = Math.min(window.devicePixelRatio||1, 2);
+    const area = fieldArea.getBoundingClientRect();
+    SCALE = Math.max(0.1, Math.min((area.width-BORDER*2)/W, (area.height-BORDER*2)/H));
+    fieldBox.style.width = (W*SCALE+BORDER*2)+'px';
+    fieldBox.style.height = (H*SCALE+BORDER*2)+'px';
+    canvas.width = Math.round(W*SCALE*DPR); canvas.height = Math.round(H*SCALE*DPR);
+    ctx.setTransform(SCALE*DPR,0,0,SCALE*DPR,0,0);
+    spriteCache.clear(); bgCache=null;
+    if(queue.length) renderQueue();
+  }
+  function pointerPos(e){
+    const r = canvas.getBoundingClientRect();
+    return { x:(e.clientX-r.left)/SCALE, y:(e.clientY-r.top)/SCALE };
+  }
+  window.addEventListener('resize', resize);
+
+  // ───────── 사운드 / 음악 (Gymnopédie 로파이) ─────────
+  let audioCtx=null;
+  const SFX_VOL=0.4;
+  function sound(freq, dur, type, vol){
+    if(!JPI.on('sfx')) return;
+    try{
+      if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+      const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+      o.type=type||'sine';
+      o.frequency.setValueAtTime(freq, audioCtx.currentTime);
+      o.frequency.exponentialRampToValueAtTime(Math.max(60,freq*0.4), audioCtx.currentTime+dur);
+      g.gain.setValueAtTime((vol||0.15)*SFX_VOL, audioCtx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime+dur);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(); o.stop(audioCtx.currentTime+dur+0.02);
+    }catch(e){}
+  }
+
+  const bgm=(function(){
+    let ac=null, master=null, timer=null, nextBar=0, barIdx=0, on=false;
+    const BPM=64, BEAT=60/BPM, BAR=3*BEAT;
+    const accA={bass:43, ch:[59,62,66]};
+    const accB={bass:38, ch:[57,61,66]};
+    const REST=[];
+    const mel=[
+      REST, REST,
+      [[0,78,1],[1,81,1],[2,79,1]],
+      [[0,78,1],[1,73,1],[2,71,1]],
+      [[0,73,1],[1,74,1],[2,69,1]],
+      [[0,66,3]],
+      [[0,78,1],[1,81,1],[2,79,1]],
+      [[0,78,1],[1,73,1],[2,71,1]],
+      [[0,73,1],[1,74,1],[2,69,1]],
+      [[0,69,3]],
+      REST, REST
+    ];
+    const f=m=>440*Math.pow(2,(m-69)/12);
+    function ensure(){
+      if(ac) return;
+      ac=new (window.AudioContext||window.webkitAudioContext)();
+      const lp=ac.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=2000; lp.Q.value=0.4;
+      master=ac.createGain(); master.gain.value=0;
+      master.connect(lp); lp.connect(ac.destination);
+      const len=ac.sampleRate*2;
+      const buf=ac.createBuffer(1,len,ac.sampleRate);
+      const d=buf.getChannelData(0);
+      for(let i=0;i<len;i++){ d[i]=(Math.random()*2-1)*(Math.random()<0.012?0.5:0.018); }
+      const ns=ac.createBufferSource(); ns.buffer=buf; ns.loop=true;
+      const hp=ac.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=1400;
+      const ng=ac.createGain(); ng.gain.value=0.055;
+      ns.connect(hp); hp.connect(ng); ng.connect(master);
+      ns.start();
+    }
+    function tone(midi,t,dur,type,vol,attack){
+      const o=ac.createOscillator(), g=ac.createGain();
+      o.type=type; o.frequency.value=f(midi);
+      g.gain.setValueAtTime(0,t);
+      g.gain.linearRampToValueAtTime(vol,t+(attack||0.02));
+      g.gain.exponentialRampToValueAtTime(0.0005,t+dur);
+      o.connect(g); g.connect(master);
+      o.start(t); o.stop(t+dur+0.05);
+    }
+    function scheduleBar(t,idx){
+      const acc=(idx%2===0)?accA:accB;
+      tone(acc.bass, t, BAR*0.95, 'sine', 0.10, 0.04);
+      acc.ch.forEach((m,i)=>{
+        tone(m, t+BEAT+i*0.035, BEAT*1.9, 'sine', 0.045, 0.08);
+      });
+      const bar=mel[idx%mel.length];
+      for(const [b,m,len] of bar){
+        tone(m, t+b*BEAT, len*BEAT*1.05, 'sine', 0.105, 0.05);
+        tone(m+12, t+b*BEAT, len*BEAT, 'sine', 0.018, 0.05);
+      }
+    }
+    function loop(){
+      while(nextBar<ac.currentTime+0.8){
+        scheduleBar(nextBar,barIdx++);
+        nextBar+=BAR;
+      }
+    }
+    return {
+      toggle(){
+        ensure();
+        if(ac.state==='suspended') ac.resume();
+        on=!on;
+        if(on){
+          nextBar=ac.currentTime+0.1; barIdx=0;
+          master.gain.cancelScheduledValues(ac.currentTime);
+          master.gain.setValueAtTime(master.gain.value, ac.currentTime);
+          master.gain.linearRampToValueAtTime(0.9, ac.currentTime+1.5);
+          timer=setInterval(loop,200); loop();
+        }else{
+          master.gain.cancelScheduledValues(ac.currentTime);
+          master.gain.setValueAtTime(master.gain.value, ac.currentTime);
+          master.gain.linearRampToValueAtTime(0, ac.currentTime+0.6);
+          clearInterval(timer);
+        }
+        return on;
+      },
+      isOn(){ return on; }
+    };
+  })();
+
+  // ───────── 게임 상태 ─────────
+  let balls=[], particles=[];
+  let level=1, popped=0, until=5, record=0;
+  let queue=[];          // queue[0]=발사대, [1..3]=NEXT (행성 tier 번호)
+  let running=false;
+  let aiming=false, aimX=0, aimY=0;
+  let pairCooldown = new Map();
+  let flashLevel=0;
+  let ballSeq=0;
+  const spriteCache=new Map();
+  let bgCache=null;
+  resize();
+
+  function quotaFor(lv){ return lv*5; }
+  function maxTier(){ return Math.min(level, PLANETS.length)-1; }
+  function randTier(){ return Math.floor(Math.random()*(maxTier()+1)); }
+  function radiusOf(tier){ return BALL_R*PLANETS[tier].size; }
+  function massOf(tier){ const r=PLANETS[tier].size; return r*r; }   // 면적 기준: 태양이 무겁되 과하지 않게
+
+  function refillQueue(){
+    while(queue.length<4) queue.push(randTier());
+    renderQueue();
+  }
+  // 대기열도 필드와 같은 방식으로 그림 (큰 행성일수록 조금 크게, 고리·빛까지 칸 안에 들어가게)
+  function paintQueuePlanet(cv, tier){
+    const css = cv.clientWidth || 32;
+    const d = Math.min(window.devicePixelRatio||1, 2);
+    cv.width = Math.round(css*d); cv.height = Math.round(css*d);
+    const pad = tier===9 ? 1.75 : padOf(tier);
+    const r = Math.min(css*0.42*Math.min(1, 0.55+0.16*PLANETS[tier].size), css/2/pad);
+    const tex = texture(tier), map = sphereMap(Math.max(3, Math.round(r*d)), tex, tier===9);
+    const surf = document.createElement('canvas'); surf.width = surf.height = map.size;
+    const sc = surf.getContext('2d'), img = sc.createImageData(map.size, map.size);
+    paintSurface(map, tex, 0, img); sc.putImageData(img, 0, 0);
+    const c = cv.getContext('2d');
+    c.setTransform(d,0,0,d, css*d/2, css*d/2);
+    if(tier===9) sunCorona(c, r, 0);
+    composePlanet(c, tier, r, surf);
+  }
+  function renderQueue(){
+    paintQueuePlanet(launcherBallEl, queue[0]);
+    const ln=document.getElementById('launcher-name');
+    ln.textContent=PLANETS[queue[0]].name;
+    ln.style.color=PLANETS[queue[0]].color;
+    nextQueueEl.innerHTML='';
+    for(let i=1;i<4;i++){
+      const cv=document.createElement('canvas');
+      cv.className='q-ball';
+      nextQueueEl.appendChild(cv);
+      paintQueuePlanet(cv, queue[i]);
+    }
+  }
+
+  function updateHUD(){
+    recordLabel.innerHTML='RECORD&nbsp;&nbsp;'+record;
+  }
+
+  // ── 기록 저장 ──
+  function loadRecord(){
+    try{ record = parseInt(localStorage.getItem('pb-record')) || 0; }
+    catch(e){ record = 0; }
+  }
+  function loadHistory(){
+    try{ return JSON.parse(localStorage.getItem('pb-history')) || []; }
+    catch(e){ return []; }
+  }
+  function saveScore(){
+    try{
+      localStorage.setItem('pb-record', String(record));
+      const h = loadHistory();
+      h.push({ s: popped, l: level, d: new Date().toISOString().slice(0,10) });
+      h.sort((x,y)=>y.s-x.s);
+      localStorage.setItem('pb-history', JSON.stringify(h.slice(0,5)));
+    }catch(e){}
+  }
+
+  // ── 진행 중 게임 자동 저장/복원 ──
+  const SAVE_KEY='pb-save';
+  function saveProgress(){
+    if(!running) return;
+    try{
+      const data={ balls, level, popped, until, queue, ballSeq, record, fw:W, fh:H };
+      localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+    }catch(e){}
+  }
+  function clearProgress(){ try{ localStorage.removeItem(SAVE_KEY); }catch(e){} }
+  function loadProgress(){
+    try{
+      const raw=localStorage.getItem(SAVE_KEY);
+      if(!raw) return null;
+      const d=JSON.parse(raw);
+      if(!d || !Array.isArray(d.balls) || !Array.isArray(d.queue) || d.queue.length<4) return null;
+      return d;
+    }catch(e){ return null; }
+  }
+  function restoreGame(d){
+    balls=d.balls||[]; particles=d.particles||[];
+    level=d.level||1; popped=d.popped||0; until=d.until||quotaFor(level);
+    queue=d.queue; ballSeq=d.ballSeq||0; record=d.record||record;
+    // 행성 크기 표가 바뀌었을 수 있으니 반지름은 항상 지금 기준으로 다시 맞춤
+    for(const b of balls) b.r = radiusOf(b.tier);
+    // 필드 크기를 고정하기 전(화면 픽셀 기준)에 저장된 게임은 새 필드 안으로 옮겨 놓음
+    if(d.fw!==W || d.fh!==H){
+      for(const b of balls){
+        b.vx = 0; b.vy = 0;
+        b.x = Math.max(b.r, Math.min(W-b.r, b.x));
+        b.y = Math.max(b.r, Math.min(H-b.r-BALL_R*3, b.y));
+      }
+    }
+    pairCooldown.clear(); running=true;
+    renderQueue(); updateHUD();
+  }
+
+  function newGame(){
+    balls=[]; particles=[]; pairCooldown.clear();
+    level=1; popped=0; until=quotaFor(1);
+    queue=[]; refillQueue();
+    running=true;
+    updateHUD();
+    saveProgress();
+  }
+
+  // ───────── 발사 ─────────
+  const launcherPos = ()=>({ x: W/2, y: H - BALL_R*0.4 });
+
+  function fire(dx, dy, power){
+    const mag = Math.hypot(dx,dy);
+    if(mag<0.001) return;
+    const lp = launcherPos();
+    const tier=queue[0];
+    const r=radiusOf(tier);
+    // 무게 반영: 같은 힘이라도 무거운 행성은 느리게 출발 (달은 쌩, 태양은 묵직하게)
+    const heavy = 1/Math.pow(PLANETS[tier].size, 0.85);
+    const v = Math.min(power, MAX_POWER) * heavy;
+    balls.push({
+      id: ballSeq++,
+      x: lp.x, y: lp.y - r,
+      vx: dx/mag*v, vy: dy/mag*v,
+      tier: tier, r: r,
+      armed: false, dead: false
+    });
+    queue.shift();
+    refillQueue();
+    sound(220, 0.1, 'triangle', 0.12);
+    saveProgress();
+  }
+
+  fieldBox.addEventListener('pointerdown', e=>{
+    if(!running) return;
+    const p = pointerPos(e);
+    aiming=true;
+    aimX=p.x; aimY=p.y;
+  });
+  fieldBox.addEventListener('pointermove', e=>{
+    if(!aiming) return;
+    const p = pointerPos(e);
+    aimX=p.x; aimY=p.y;
+  });
+  function endAim(){
+    if(!aiming || !running){ aiming=false; return; }
+    aiming=false;
+    const lp = launcherPos();
+    const dx = aimX-lp.x, dy = aimY-lp.y;
+    if(dy>=-10) return;
+    const dist = Math.hypot(dx,dy);
+    const power = dist/H * MAX_POWER * 2.1;
+    fire(dx, dy, power);
+  }
+  window.addEventListener('pointerup', endAim);
+  window.addEventListener('pointercancel', ()=>{aiming=false;});
+
+  // ───────── 규칙: 같은 행성 → 한 단계 축소, 달끼리 → 소멸 ─────────
+  function shrink(b){
+    popped++; until--;
+    if(popped>record) record=popped;
+    if(b.tier===0){
+      burst(b);
+      b.dead=true;
+      sound(560, 0.16, 'sine', 0.2); JPI.vibrate(25);
+    }else{
+      b.tier--;
+      b.r=radiusOf(b.tier);
+      sound(330+b.tier*20, 0.08, 'square', 0.07); JPI.vibrate(8);
+    }
+  }
+
+  function levelCheck(){
+    if(until<=0){
+      level++;
+      until=quotaFor(level);
+      sound(660, 0.3, 'sine', 0.18); JPI.vibrate([30,60,30]);
+      flashLevel=1;
+      saveProgress();
+    }
+  }
+
+  function burst(b){
+    const p=PLANETS[b.tier];
+    const n=Math.floor(16+b.r);
+    for(let i=0;i<n;i++){
+      const a=Math.random()*Math.PI*2, s=0.8+Math.random()*3;
+      particles.push({x:b.x,y:b.y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-0.4,life:1,size:1+Math.random()*2.6,color:p.color});
+    }
+  }
+  function sparks(x,y,color,count,speed){
+    for(let i=0;i<count;i++){
+      const a=Math.random()*Math.PI*2, s=speed*(0.3+Math.random());
+      particles.push({x:x,y:y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:0.9+Math.random()*0.3,size:0.7+Math.random()*1.8,color:color});
+    }
+  }
+
+  function endGame(){
+    running=false;
+    clearProgress();
+    saveScore();
+    overlayTitle.textContent='GAME OVER';
+    overlayStats.style.display='block';
+    const h=loadHistory();
+    let rows='';
+    for(let i=0;i<h.length;i++){
+      rows += (i+1)+'.&nbsp;&nbsp;'+h[i].s+'&nbsp;&nbsp;<span style="font-size:0.75em;color:#6c7171">LV '+h[i].l+' · '+h[i].d+'</span><br>';
+    }
+    overlayStats.innerHTML='POPPED&nbsp;&nbsp;'+popped+'&nbsp;&nbsp;·&nbsp;&nbsp;LEVEL&nbsp;&nbsp;'+level
+      +'<br><br><span style="letter-spacing:0.25em">TOP&nbsp;5</span><br>'+rows;
+    overlayHint.style.display='block';
+    overlayHint.textContent='행성이 아래 라인을 넘어갔습니다.';
+    startBtn.textContent='RETRY';
+    overlay.classList.remove('hidden');
+    sound(140, 0.5, 'sawtooth', 0.18);
+    JPI.vibrate(160);
+  }
+
+  // ───────── 물리 (질량 기반) ─────────
+  function physics(){
+    for(const [k,v] of pairCooldown){
+      if(v<=1) pairCooldown.delete(k);
+      else pairCooldown.set(k, v-1);
+    }
+
+    const SUB = 4;
+    for(const b of balls){ b.popKicked=false; b.hits=0; }
+    for(let s=0; s<SUB; s++){
+      for(const b of balls){
+        b.x += b.vx/SUB;
+        b.y += b.vy/SUB;
+
+        if(b.x<b.r){ b.x=b.r; b.vx=Math.abs(b.vx)*WALL_BOUNCE; }
+        if(b.x>W-b.r){ b.x=W-b.r; b.vx=-Math.abs(b.vx)*WALL_BOUNCE; }
+        if(b.y<b.r){ b.y=b.r; b.vy=Math.abs(b.vy)*WALL_BOUNCE; }
+
+        if(!b.armed && b.y < H - BALL_R*3.2) b.armed=true;
+
+        if(b.armed && b.y - b.r >= H){
+          endGame();
+          return;
+        }
+      }
+
+      for(let i=0;i<balls.length;i++){
+        for(let j=i+1;j<balls.length;j++){
+          const a=balls[i], c=balls[j];
+          if(a.dead||c.dead) continue;
+          const dx=c.x-a.x, dy=c.y-a.y;
+          const dist=Math.hypot(dx,dy), minD=a.r+c.r;
+          const popD=minD*POP_RANGE;
+
+          // 같은 행성: 충분한 속도로 부딪힐 때만 축소 (가만히 붙어있으면 안 됨 — 원조 방식)
+          if(dist<popD && a.tier===c.tier){
+            const rvx=a.vx-c.vx, rvy=a.vy-c.vy;
+            const relSpeed=Math.hypot(rvx,rvy);
+            const key=a.id+'-'+c.id;
+            if(relSpeed>=POP_MIN_SPEED && !pairCooldown.has(key)){
+              const col=PLANETS[a.tier].color;
+              sparks((a.x+c.x)/2, (a.y+c.y)/2, col, 16, 2.6);
+              sparks((a.x+c.x)/2, (a.y+c.y)/2, '#ffffff', 6, 1.8);
+              shrink(a); shrink(c);
+              if(dist>0.0001){
+                const knx=dx/dist, kny=dy/dist;
+                const kn=1.5/PLANETS[Math.max(0,a.tier)].size;   // 무거울수록 반동 작게
+                if(!a.popKicked){ a.vx-=knx*kn; a.vy-=kny*kn; a.popKicked=true; }
+                if(!c.popKicked){ c.vx+=knx*kn; c.vy+=kny*kn; c.popKicked=true; }
+              }
+              levelCheck();
+              pairCooldown.set(key, POP_TICK);
+            }
+          }
+
+          if(dist<minD && dist>0.0001){
+            const nx=dx/dist, ny=dy/dist;
+            const m1=massOf(a.tier), m2=massOf(c.tier);
+            const total=m1+m2;
+            const overlap=(minD-dist);
+            // 가벼운 쪽이 더 밀려남
+            a.x-=nx*overlap*(m2/total); a.y-=ny*overlap*(m2/total);
+            c.x+=nx*overlap*(m1/total); c.y+=ny*overlap*(m1/total);
+
+            // 질량 기반 충격량: 무거운 행성은 덜 흔들리고 가벼운 행성은 팽 튕김
+            const rel=(c.vx-a.vx)*nx+(c.vy-a.vy)*ny;
+            if(rel<0){
+              const jimp=(1+RESTITUTION)*rel/(1/m1+1/m2);
+              a.vx+=jimp*nx/m1;
+              a.vy+=jimp*ny/m1;
+              c.vx-=jimp*nx/m2;
+              c.vy-=jimp*ny/m2;
+
+              // 연쇄 감쇠: 2번째 반발부터 속도 줄임 (1대1 정면은 그대로)
+              a.hits=(a.hits||0)+1;
+              c.hits=(c.hits||0)+1;
+              const CHAIN_DAMP=0.45;
+              if(a.hits>=2){ a.vx*=CHAIN_DAMP; a.vy*=CHAIN_DAMP; }
+              if(c.hits>=2){ c.vx*=CHAIN_DAMP; c.vy*=CHAIN_DAMP; }
+
+              const impact=-rel;
+              if(impact>0.6){
+                const cx=(a.x+c.x)/2, cy=(a.y+c.y)/2;
+                const cnt=Math.min(14, Math.floor(impact*3));
+                sparks(cx, cy, PLANETS[a.tier].color, cnt, impact*0.5);
+                sparks(cx, cy, PLANETS[c.tier].color, cnt, impact*0.5);
+              }
+            }
+          }
+        }
+      }
+      balls=balls.filter(b=>!b.dead);
+    }
+
+    const SPEED_CAP = MAX_POWER * 2;   // 가벼운 행성 발사 속도는 통과, 연쇄 과속만 차단
+    for(const b of balls){
+      let sp = Math.hypot(b.vx,b.vy);
+      if(sp>SPEED_CAP){ b.vx=b.vx/sp*SPEED_CAP; b.vy=b.vy/sp*SPEED_CAP; sp=SPEED_CAP; }
+      if(sp>0){
+        const ns = Math.max(0, sp*FRICTION_KEEP - FRICTION_SUB);
+        if(ns<STOP_SPEED){ b.vx=0; b.vy=0; }
+        else { b.vx=b.vx/sp*ns; b.vy=b.vy/sp*ns; }
+      }
+    }
+
+    for(let pass=0; pass<10; pass++){
+      let any=false;
+      for(let i=0;i<balls.length;i++){
+        for(let j=i+1;j<balls.length;j++){
+          const a=balls[i], c=balls[j];
+          const dx=c.x-a.x, dy=c.y-a.y;
+          let dist=Math.hypot(dx,dy);
+          const minD=a.r+c.r;
+          const sep=minD+EDGE;
+          if(dist<sep){
+            any=true;
+            let nx, ny;
+            if(dist<0.0001){ const ra=Math.random()*Math.PI*2; nx=Math.cos(ra); ny=Math.sin(ra); dist=0.0001; }
+            else { nx=dx/dist; ny=dy/dist; }
+            const overlap=Math.max(0,(sep-dist))/2;
+            a.x-=nx*overlap; a.y-=ny*overlap;
+            c.x+=nx*overlap; c.y+=ny*overlap;
+            a.x=Math.max(a.r, Math.min(W-a.r, a.x)); if(a.y<a.r) a.y=a.r;
+            c.x=Math.max(c.r, Math.min(W-c.r, c.x)); if(c.y<c.r) c.y=c.r;
+          }
+        }
+      }
+      if(!any) break;
+    }
+    updateHUD();
+  }
+
+  // ───────── 그리기 ─────────
+  function drawHUD(){
+    ctx.save();
+    ctx.globalAlpha=0.42;
+    ctx.fillStyle='#5e6363';
+    ctx.textAlign='center';
+    ctx.textBaseline='middle';
+    const labelSize=Math.min(W*0.058, 24);
+    const valueSize=Math.min(W*0.17, 80);
+    const blocks=[
+      ['LEVEL', level, H*0.17],
+      ['POPPED', popped, H*0.5],
+      ['UNTIL NEXT LEVEL', until, H*0.83]
+    ];
+    for(const [label, value, cy] of blocks){
+      ctx.font=labelSize+'px "Special Elite", monospace';
+      ctx.fillText(label, W/2, cy - valueSize*0.62);
+      ctx.font=valueSize+'px "Special Elite", monospace';
+      ctx.fillText(value, W/2, cy + labelSize*0.55);
+    }
+    ctx.restore();
+  }
+
+  // ───────── 우주 배경 (어두운 우주 + 옅은 성운 + 별) — 한 번 그려 두고 재사용 ─────────
+  function seeded(seed){
+    return function(){
+      seed = (seed + 0x6D2B79F5) | 0;
+      let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function buildBackground(){
+    const cv=document.createElement('canvas');
+    cv.width=canvas.width; cv.height=canvas.height;
+    const c=cv.getContext('2d');
+    c.setTransform(SCALE*DPR,0,0,SCALE*DPR,0,0);
+    c.fillStyle='#04060c'; c.fillRect(0,0,W,H);
+    const glow=(x,y,rad,col)=>{
+      const rg=c.createRadialGradient(x,y,0,x,y,rad);
+      rg.addColorStop(0,col); rg.addColorStop(1,'rgba(0,0,0,0)');
+      c.fillStyle=rg; c.fillRect(0,0,W,H);
+    };
+    glow(W*0.15, H*0.62, W*0.8, 'rgba(70,45,130,0.12)');
+    glow(W*0.85, H*0.2,  W*0.7, 'rgba(30,75,150,0.12)');
+    const rnd=seeded(7);
+    for(let i=0;i<190;i++){
+      const tint = rnd();
+      const col = tint<0.12 ? '170,200,255' : tint<0.2 ? '255,215,170' : '255,255,255';
+      c.fillStyle='rgba('+col+','+(0.25+rnd()*0.7).toFixed(2)+')';
+      c.beginPath(); c.arc(rnd()*W, rnd()*H, 0.35+rnd()*1.05, 0, Math.PI*2); c.fill();
+    }
+    return cv;
+  }
+  function drawBackground(){
+    if(!bgCache) bgCache=buildBackground();
+    ctx.save(); ctx.setTransform(1,0,0,1,0,0); ctx.drawImage(bgCache,0,0); ctx.restore();
+  }
+
+  // ───────── 행성 ─────────
+  // 행성마다 펼친 지도(질감)를 만들어 두고, 공 모양에 감아서 그림. 지도를 옆으로 밀면 천천히 자전함
+  const PERIOD=[48,40,34,70,26,22,24,16,13,0];      // 한 바퀴 도는 데 걸리는 초 (태양은 표면 고정, 빛살만 회전)
+  // 규칙: 클수록 주변 빛(후광)이 더 밝고 넓어짐
+  function haloReach(t){ return 1.18 + 0.025*t; }
+  function haloAlpha(t){ return 0.07 + 0.04*t; }
+  const RINGS={
+    6:{tilt:1.25, rx:1.42, ry:0.3, layers:[[1,'rgba(225,245,255,0.75)',0.05],[1.12,'rgba(200,235,250,0.4)',0.03]]},
+    7:{tilt:-0.32, rx:1.55, ry:0.42, layers:[[1.12,'rgba(240,222,180,0.7)',0.08],[1,'rgba(222,196,140,0.92)',0.16],[0.86,'rgba(170,140,95,0.85)',0.09]]}
+  };
+  const ATMO={3:'rgba(255,220,150,0.35)', 4:'rgba(140,200,255,0.6)', 5:'rgba(140,175,255,0.5)', 6:'rgba(190,240,250,0.5)'};
+  function padOf(t){
+    if(t===9) return 1.05;
+    let p=haloReach(t)+0.02;
+    if(t===7) p=Math.max(p,1.8);
+    if(t===6) p=Math.max(p,1.64);
+    return p;
+  }
+  function circlePath(c, r){ c.beginPath(); c.arc(0,0,r,0,Math.PI*2); }
+  function rgba(hex, a){
+    const n=parseInt(hex.slice(1),16);
+    return 'rgba('+(n>>16&255)+','+(n>>8&255)+','+(n&255)+','+a+')';
+  }
+  function blob(c, x, y, sx, sy, rnd){
+    const n=9, pts=[];
+    for(let i=0;i<n;i++){ const a=i/n*Math.PI*2, k=0.55+rnd()*0.7; pts.push([x+Math.cos(a)*sx*k, y+Math.sin(a)*sy*k]); }
+    const mid=(p,q)=>[(p[0]+q[0])/2,(p[1]+q[1])/2];
+    c.beginPath();
+    const m0=mid(pts[0],pts[1]); c.moveTo(m0[0],m0[1]);
+    for(let i=1;i<=n;i++){ const p=pts[i%n], m=mid(p,pts[(i+1)%n]); c.quadraticCurveTo(p[0],p[1],m[0],m[1]); }
+    c.closePath(); c.fill();
+  }
+
+  const textures=[];
+  function texture(tier){ return textures[tier] || (textures[tier]=makeTexture(tier)); }
+  function makeTexture(tier){
+    const w = tier>=5 ? 512 : 256, h = w/2, S = w/256;
+    const cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+    const c=cv.getContext('2d');
+    const rnd=seeded(500+tier*131);
+    const wrap=fn=>{ for(const dx of [-w,0,w]){ c.save(); c.translate(dx,0); fn(); c.restore(); } };
+    const fill=col=>{ c.fillStyle=col; c.fillRect(0,0,w,h); };
+    const speckle=(n,cols,r0,r1,a0,a1)=>{
+      for(let i=0;i<n;i++){
+        const x=rnd()*w, y=rnd()*h, rr=(r0+rnd()*(r1-r0))*S;
+        c.globalAlpha=a0+rnd()*(a1-a0); c.fillStyle=cols[(rnd()*cols.length)|0];
+        wrap(()=>{ c.beginPath(); c.arc(x,y,rr,0,Math.PI*2); c.fill(); });
+      }
+      c.globalAlpha=1;
+    };
+    const craters=(n,r0,r1,dark,light)=>{
+      for(let i=0;i<n;i++){
+        const x=rnd()*w, y=h*(0.12+rnd()*0.76), rr=(r0+rnd()*(r1-r0))*S;
+        wrap(()=>{
+          c.fillStyle=dark; c.beginPath(); c.ellipse(x,y,rr*1.3,rr,0,0,Math.PI*2); c.fill();
+          c.strokeStyle=light; c.lineWidth=Math.max(1,rr*0.3);
+          c.beginPath(); c.ellipse(x,y,rr*1.2,rr*0.92,0,Math.PI*0.05,Math.PI*0.95); c.stroke();
+        });
+      }
+    };
+    const blobs=(n,cols,sx0,sx1,y0,y1)=>{
+      for(let i=0;i<n;i++){
+        const x=rnd()*w, y=h*(y0+rnd()*(y1-y0)), sx=(sx0+rnd()*(sx1-sx0))*S, col=cols[(rnd()*cols.length)|0];
+        const seed=rnd()*1e9|0;
+        wrap(()=>{ c.fillStyle=col; blob(c,x,y,sx,sx*0.6,seeded(seed)); });
+      }
+    };
+    const bands=(cols,h0,h1,amp,alpha)=>{
+      let y=0; c.globalAlpha=alpha;
+      while(y<h){
+        const bh=(h0+rnd()*(h1-h0))*h, col=cols[(rnd()*cols.length)|0];
+        const k=1+((rnd()*3)|0), ph=rnd()*6.28, ph2=rnd()*6.28;
+        c.fillStyle=col; c.beginPath();
+        c.moveTo(0, y+Math.sin(ph)*amp*h);
+        for(let x=4;x<=w;x+=4) c.lineTo(x, y+Math.sin(x/w*Math.PI*2*k+ph)*amp*h);
+        for(let x=w;x>=0;x-=4) c.lineTo(x, y+bh+Math.sin(x/w*Math.PI*2*k+ph2)*amp*h);
+        c.closePath(); c.fill();
+        y+=bh;
+      }
+      c.globalAlpha=1;
+    };
+    const caps=(col,top,bottom)=>{
+      c.fillStyle=col;
+      const edge=(y0,dir,size)=>{
+        c.beginPath(); c.moveTo(0,y0);
+        for(let x=0;x<=w;x+=4) c.lineTo(x, y0+dir*(size+Math.sin(x/w*Math.PI*6+tier)*size*0.35)*h);
+        c.lineTo(w,y0); c.closePath(); c.fill();
+      };
+      if(top) edge(0,1,top);
+      if(bottom) edge(h,-1,bottom);
+    };
+
+    switch(tier){
+      case 0: // 달
+        fill('#b5b8be');
+        speckle(500,['#c9cbd0','#9da0a6'],1,3,0.15,0.35);
+        blobs(6,['rgba(105,108,116,0.45)'],14,30,0.25,0.75);
+        craters(28,2,6,'rgba(122,125,132,0.6)','rgba(236,237,241,0.5)');
+        break;
+      case 1: // 수성
+        fill('#8a7765');
+        speckle(600,['#9d8a77','#6d5d4f'],1,3,0.2,0.4);
+        craters(42,1.5,5,'rgba(88,74,62,0.65)','rgba(212,196,176,0.45)');
+        break;
+      case 2: // 화성
+        fill('#c4552c');
+        speckle(500,['#d66c3b','#a8421e'],1,4,0.2,0.4);
+        blobs(8,['rgba(108,38,16,0.5)'],10,26,0.25,0.75);
+        blobs(4,['rgba(235,150,90,0.35)'],12,22,0.3,0.7);
+        caps('rgba(255,255,255,0.92)',0.07,0.05);
+        break;
+      case 3: // 금성
+        fill('#d9a95a');
+        bands(['#f0d18e','#c8923f','#e6bd72'],0.05,0.12,0.03,0.55);
+        speckle(300,['#f5dca6','#b9853c'],2,6,0.08,0.18);
+        break;
+      case 4: // 지구
+        fill('#1c5bb2');
+        speckle(300,['#2a6cc4','#154b98'],3,8,0.2,0.4);
+        blobs(7,['#3d8b3d','#4a9a43','#367d38'],18,36,0.22,0.78);
+        blobs(4,['rgba(176,146,86,0.75)'],8,14,0.35,0.65);
+        caps('rgba(245,250,255,0.95)',0.08,0.08);
+        for(let i=0;i<26;i++){
+          const x=rnd()*w, y=h*(0.1+rnd()*0.8), rx=(10+rnd()*26)*S, ry=(2+rnd()*3)*S, rot=(rnd()-0.5)*0.3;
+          c.fillStyle='rgba(255,255,255,'+(0.35+rnd()*0.3).toFixed(2)+')';
+          wrap(()=>{ c.beginPath(); c.ellipse(x,y,rx,ry,rot,0,Math.PI*2); c.fill(); });
+        }
+        break;
+      case 5: // 해왕성
+        fill('#2d52c4');
+        bands(['#3a64d6','#2446ab','#4a74e0'],0.05,0.12,0.02,0.5);
+        c.fillStyle='#152c7c'; wrap(()=>{ c.beginPath(); c.ellipse(w*0.35,h*0.62,w*0.045,h*0.06,0,0,Math.PI*2); c.fill(); });
+        for(let i=0;i<8;i++){
+          const x=rnd()*w, y=h*(0.25+rnd()*0.5), rx=(12+rnd()*18)*S;
+          c.fillStyle='rgba(225,235,255,0.55)';
+          wrap(()=>{ c.beginPath(); c.ellipse(x,y,rx,1.6*S,0,0,Math.PI*2); c.fill(); });
+        }
+        break;
+      case 6: // 천왕성
+        fill('#7fd0dd');
+        bands(['#8ad8e4','#74c3d1','#93dde8'],0.08,0.18,0.01,0.35);
+        break;
+      case 7: // 토성
+        fill('#e0c487');
+        bands(['#ecd7a2','#d4b06f','#c9a262','#f0dfb2','#b8925a'],0.03,0.08,0.008,0.8);
+        break;
+      case 8: // 목성
+        fill('#d8b48a');
+        bands(['#efe0c6','#c58556','#e2c39b','#a8663f','#f3e7d2','#b97a4e'],0.035,0.09,0.012,0.9);
+        speckle(400,['#f3e7d2','#b0704a'],2,6,0.08,0.2);
+        wrap(()=>{
+          c.fillStyle='#bf543a'; c.beginPath(); c.ellipse(w*0.3,h*0.64,w*0.045,h*0.05,0,0,Math.PI*2); c.fill();
+          c.strokeStyle='rgba(245,225,200,0.7)'; c.lineWidth=2*S; c.stroke();
+        });
+        break;
+      case 9: // 태양
+        fill('#ffc93a');
+        speckle(2600,['#ffe27a','#ffb21f','#fff1a8'],0.5,1.6,0.18,0.38);
+        break;
+    }
+    return { data:c.getImageData(0,0,w,h).data, w, h };
+  }
+
+  // 공 모양에 지도를 감기 위한 화면 픽셀 → (경도, 위도, 밝기) 표. 빛은 왼쪽 위 앞에서 비춤
+  const LIGHT=(()=>{ const l=[-0.5,-0.45,0.74], m=Math.hypot(l[0],l[1],l[2]); return l.map(v=>v/m); })();
+  function sphereMap(R, tex, isSun){
+    const size=R*2, idx=[], lonU=[], row=[], lit=[];
+    for(let j=0;j<size;j++){
+      const ny=(j+0.5-R)/R;
+      for(let i=0;i<size;i++){
+        const nx=(i+0.5-R)/R, d=nx*nx+ny*ny;
+        if(d>=1) continue;
+        const nz=Math.sqrt(1-d), lat=Math.asin(ny), cl=Math.cos(lat);
+        const lon=Math.asin(Math.max(-1, Math.min(1, nx/cl)));
+        idx.push((j*size+i)*4);
+        lonU.push(lon/(Math.PI*2)*tex.w);
+        row.push(Math.min(tex.h-1, Math.floor((lat/Math.PI+0.5)*tex.h))*tex.w*4);
+        const dot=nx*LIGHT[0]+ny*LIGHT[1]+nz*LIGHT[2];
+        lit.push(isSun ? 0.8+0.25*nz : 0.28+0.85*Math.max(0,dot));
+      }
+    }
+    return { size, idx:Int32Array.from(idx), lonU:Float32Array.from(lonU), row:Int32Array.from(row), lit:Float32Array.from(lit) };
+  }
+  function paintSurface(map, tex, shift, img){
+    const d=img.data, t=tex.data, tw=tex.w, n=map.idx.length;
+    const idx=map.idx, lonU=map.lonU, row=map.row, lit=map.lit;
+    for(let k=0;k<n;k++){
+      let u=(lonU[k]-shift)%tw; if(u<0) u+=tw;
+      const s=row[k]+((u|0)<<2), o=idx[k], L=lit[k];
+      d[o]=t[s]*L; d[o+1]=t[s+1]*L; d[o+2]=t[s+2]*L; d[o+3]=255;
+    }
+  }
+  function drawRing(c, r, ring, half){
+    c.save(); c.rotate(ring.tilt);
+    const a0 = half==='back' ? Math.PI : 0;
+    for(const [k, col, w] of ring.layers){
+      c.strokeStyle=col; c.lineWidth=w*r;
+      c.beginPath(); c.ellipse(0,0,ring.rx*r*k,ring.ry*r*k,0,a0,a0+Math.PI); c.stroke();
+    }
+    c.restore();
+  }
+  // 후광 → 고리 뒤쪽 → 표면 → 대기 테두리 → 고리 앞쪽 순서로 겹쳐 그림
+  function composePlanet(c, tier, r, surf){
+    if(tier!==9){
+      const reach=r*haloReach(tier), g=c.createRadialGradient(0,0,r*0.9,0,0,reach);
+      g.addColorStop(0, rgba(PLANETS[tier].color, haloAlpha(tier)));
+      g.addColorStop(1, rgba(PLANETS[tier].color, 0));
+      c.fillStyle=g; circlePath(c,reach); c.fill();
+    }
+    const ring=RINGS[tier];
+    if(ring) drawRing(c,r,ring,'back');
+    c.save(); circlePath(c,r); c.clip(); c.drawImage(surf,-r,-r,r*2,r*2); c.restore();
+    if(ATMO[tier]){
+      c.save(); c.strokeStyle=ATMO[tier]; c.lineWidth=r*0.07; c.shadowColor=ATMO[tier]; c.shadowBlur=r*0.3;
+      circlePath(c,r*0.98); c.stroke(); c.restore();
+    }
+    if(ring) drawRing(c,r,ring,'front');
+  }
+  // 태양: 빛 번짐이 천천히 숨 쉬고, 빛살이 천천히 돎
+  function sunCorona(c, r, t){
+    const pulse=1+0.04*Math.sin(t*1.3);
+    const glow=c.createRadialGradient(0,0,r*0.85,0,0,r*1.7*pulse);
+    glow.addColorStop(0,'rgba(255,190,70,0.6)'); glow.addColorStop(1,'rgba(255,120,0,0)');
+    c.fillStyle=glow; circlePath(c,r*1.7*pulse); c.fill();
+    c.save(); c.rotate(t*0.06);
+    c.fillStyle='rgba(255,165,35,0.85)';
+    const rnd=seeded(99), n=26;
+    for(let i=0;i<n;i++){
+      const a=i/n*Math.PI*2, w=Math.PI/n*0.7, tip=r*(1.1+rnd()*0.16);
+      c.beginPath();
+      c.moveTo(Math.cos(a-w)*r*0.96, Math.sin(a-w)*r*0.96);
+      c.lineTo(Math.cos(a)*tip, Math.sin(a)*tip);
+      c.lineTo(Math.cos(a+w)*r*0.96, Math.sin(a+w)*r*0.96);
+      c.closePath(); c.fill();
+    }
+    c.restore();
+  }
+
+  // 필드용: 행성 종류마다 그림 하나를 두고, 몇 프레임마다 자전시켜 다시 그림 (같은 행성은 모두 같은 그림 공유)
+  function planetEntry(tier){
+    let e=spriteCache.get(tier);
+    if(e) return e;
+    const tex=texture(tier), r=radiusOf(tier), k=SCALE*DPR;
+    const R=Math.max(4, Math.round(r*k));
+    const map=sphereMap(R, tex, tier===9);
+    const surf=document.createElement('canvas'); surf.width=surf.height=map.size;
+    const sc=surf.getContext('2d'), img=sc.createImageData(map.size, map.size);
+    const ext=r*padOf(tier), px=Math.max(2, Math.ceil(ext*2*k));
+    const sprite=document.createElement('canvas'); sprite.width=sprite.height=px;
+    e={tier, tex, r, k, map, surf, sc, img, ext, px, sprite, drawn:false};
+    spriteCache.set(tier, e);
+    return e;
+  }
+  function renderEntry(e, shift){
+    paintSurface(e.map, e.tex, shift, e.img);
+    e.sc.putImageData(e.img, 0, 0);
+    const c=e.sprite.getContext('2d');
+    c.setTransform(1,0,0,1,0,0); c.clearRect(0,0,e.px,e.px);
+    c.setTransform(e.k,0,0,e.k,e.px/2,e.px/2);
+    composePlanet(c, e.tier, e.r, e.surf);
+    e.drawn=true;
+  }
+  let frameNo=0, animT=0;
+  function animatePlanets(now){
+    frameNo++; animT=now/1000;
+    const seen=new Set();
+    for(const b of balls) seen.add(b.tier);
+    for(const t of seen){
+      const e=planetEntry(t);
+      if(t===9){ if(!e.drawn) renderEntry(e,0); continue; }
+      if(e.drawn && (frameNo+t)%3) continue;     // 행성마다 3프레임에 한 번씩 나눠서 갱신
+      renderEntry(e, animT/PERIOD[t]*e.tex.w);
+    }
+  }
+  function drawBall(b){
+    const e=planetEntry(b.tier);
+    if(!e.drawn) renderEntry(e,0);
+    if(b.tier===9){ ctx.save(); ctx.translate(b.x,b.y); sunCorona(ctx, e.r, animT); ctx.restore(); }
+    ctx.drawImage(e.sprite, b.x-e.ext, b.y-e.ext, e.ext*2, e.ext*2);
+  }
+
+  function drawAim(){
+    if(!aiming || !running) return;
+    const lp=launcherPos();
+    const dx=aimX-lp.x, dy=aimY-lp.y;
+    const mag=Math.hypot(dx,dy);
+    if(mag<1) return;
+    const ext=Math.max(W,H)*2;
+    ctx.save();
+    ctx.strokeStyle='rgba(255,255,255,0.75)';
+    ctx.lineWidth=2;
+    ctx.shadowColor='rgba(255,255,255,0.8)';
+    ctx.shadowBlur=6;
+    ctx.beginPath();
+    ctx.moveTo(lp.x, lp.y);
+    ctx.lineTo(lp.x+dx/mag*ext, lp.y+dy/mag*ext);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(aimX, aimY, 34, 0, Math.PI*2);
+    ctx.fillStyle='rgba(255,255,255,0.45)';
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawParticles(){
+    for(let i=particles.length-1;i>=0;i--){
+      const p=particles[i];
+      p.x+=p.vx; p.y+=p.vy; p.vy+=0.02; p.life-=0.022;
+      if(p.life<=0){ particles.splice(i,1); continue; }
+      ctx.globalAlpha=Math.max(0, Math.min(1, p.life));
+      ctx.fillStyle=p.color;
+      ctx.fillRect(p.x, p.y, p.size, p.size);
+    }
+    ctx.globalAlpha=1;
+  }
+
+  function drawLevelFlash(){
+    if(flashLevel<=0) return;
+    flashLevel-=0.02;
+    ctx.save();
+    ctx.globalAlpha=Math.max(0, Math.min(flashLevel,0.85));
+    ctx.fillStyle='#e8eaea';
+    ctx.font=Math.min(W*0.12,44)+'px "Special Elite", monospace';
+    ctx.textAlign='center';
+    ctx.shadowColor='#fff'; ctx.shadowBlur=16;
+    const t = level<=PLANETS.length ? 'LEVEL '+level+' · '+PLANETS[Math.min(level,PLANETS.length)-1].name+' 해금' : 'LEVEL '+level;
+    ctx.fillText(t, W/2, H*0.5);
+    ctx.restore();
+  }
+
+  // 화면 주사율과 무관하게 초당 60번만 진행 (120Hz 화면에서 2배속이 되지 않게)
+  const STEP_MS = 1000/60;
+  let lastFrameT = 0, frameAcc = 0;
+  function frameDue(t){
+    frameAcc += Math.min(100, Math.max(0, t - lastFrameT)); lastFrameT = t;
+    if(frameAcc < STEP_MS - 1.5) return false;
+    frameAcc = Math.min(Math.max(frameAcc - STEP_MS, 0), STEP_MS);
+    return true;
+  }
+  function loop(t){
+    if(frameDue(t === undefined ? performance.now() : t)){
+      drawBackground();
+      drawHUD();
+      if(running && !JPI.isOpen()) physics();
+      drawAim();
+      animatePlanets(t === undefined ? performance.now() : t);
+      for(const b of balls) drawBall(b);
+      drawParticles();
+      drawLevelFlash();
+    }
+    requestAnimationFrame(loop);
+  }
+  loop();
+
+  // ───────── 메뉴 ─────────
+  loadRecord();
+  updateHUD();
+
+  const resumeBtn = document.getElementById('resume-btn');
+
+  // 메뉴(시작) 화면 — 저장본 있으면 '이어하기'가 크게(주), '새 게임'이 작게(보조)
+  function showMenu(){
+    running=false;
+    overlayTitle.textContent='PLANET BONK';
+    overlayStats.style.display='none';
+    overlayHint.style.display='none';
+    const hasSave = !!loadProgress();
+    if(hasSave){
+      resumeBtn.style.display='inline-block';
+      resumeBtn.classList.remove('secondary');
+      resumeBtn.style.order='0';
+      startBtn.textContent='NEW GAME';
+      startBtn.classList.add('secondary');
+      startBtn.style.order='1';
+    }else{
+      resumeBtn.style.display='none';
+      startBtn.textContent='START';
+      startBtn.classList.remove('secondary');
+      startBtn.style.order='0';
+    }
+    overlay.classList.remove('hidden');
+  }
+  function beginGame(fresh){
+    overlay.classList.add('hidden');
+    overlayStats.style.display='none';
+    resize();
+    if(fresh){ newGame(); }
+    else { const saved=loadProgress(); if(saved) restoreGame(saved); else newGame(); }
+    if(JPI.on('music')!==bgm.isOn()) bgm.toggle();
+  }
+
+  // 앱을 끄거나 뒤로 가는 등 화면을 벗어날 때 즉시 저장
+  document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden') saveProgress(); });
+  window.addEventListener('pagehide', saveProgress);
+  window.addEventListener('beforeunload', saveProgress);
+
+  const HELP = [
+    '화면을 누른 채 손가락을 움직여 조준하고, 손을 떼면 발사됩니다. 발사대에서 먼 곳을 누를수록 세게 나갑니다.',
+    '같은 행성끼리 부딪히면 둘 다 한 단계 작은 행성이 됩니다. 가만히 닿아 있기만 하면 변하지 않습니다.',
+    '크기 순서: 달 < 수성 < 화성 < 금성 < 지구 < 해왕성 < 천왕성 < 토성 < 목성 < 태양',
+    '가장 작은 달끼리 부딪히면 사라집니다.',
+    '큰 행성일수록 무거워서 천천히 날아가고, 잘 밀리지 않습니다.',
+    '행성이 작아질 때마다 UNTIL NEXT LEVEL이 1씩 줄고, 0이 되면 레벨이 오르며 더 큰 행성이 나옵니다.',
+    '행성이 아래 선 밖으로 완전히 빠져나가면 게임 오버입니다.'
+  ];
+  function onSettingChange(key, val){
+    if(key==='music' && bgm.isOn()!==val) bgm.toggle();
+  }
+
+  startBtn.addEventListener('click', ()=>{ clearProgress(); JPI.helpOnce('game', 'HOW TO PLAY', HELP, ()=>beginGame(true)); });
+  resumeBtn.addEventListener('click', ()=>{ beginGame(false); });
+  document.getElementById('help-link').addEventListener('click', ()=>JPI.openHelp('HOW TO PLAY', HELP));
+  document.getElementById('settings-link').addEventListener('click', ()=>JPI.openSettings(onSettingChange));
+  settingsBtn.addEventListener('click', ()=>{ aiming=false; JPI.openSettings(onSettingChange); });
+  menuBtn.addEventListener('click', ()=>{
+    aiming=false;
+    saveProgress();   // 진행 상태를 저장한 뒤 시작 화면으로 (CONTINUE로 이어하기)
+    showMenu();
+  });
+
+  // 시작 시: 저장본 있으면 '이어하기' 메뉴 표시
+  showMenu();
+})();
+</script>
+</body>
+</html>
