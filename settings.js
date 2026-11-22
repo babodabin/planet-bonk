@@ -68,7 +68,7 @@
   // onChange(name, value): 화면마다 배경음악을 켜고 끄는 등 즉시 반영할 일을 처리
   function openSettings(onChange){
     const list=document.createElement('div'); list.className='jpi-list';
-    const rows=[['music','배경음악'],['sfx','효과음'],['vibe','진동']];
+    const rows=[['music','Music'],['sfx','Sound effects'],['vibe','Vibration']];
     for(const [key,label] of rows){
       const row=document.createElement('div'); row.className='jpi-row';
       const name=document.createElement('span'); name.textContent=label;
@@ -76,7 +76,7 @@
       const unsupported = key==='vibe' && !canVibrate;
       function render(){
         const v=on(key);
-        btn.textContent = unsupported ? '이 기기는 지원 안 됨' : (v?'ON':'OFF');
+        btn.textContent = unsupported ? 'Not supported' : (v?'ON':'OFF');
         btn.classList.toggle('on', v && !unsupported);
       }
       if(unsupported) btn.disabled=true;

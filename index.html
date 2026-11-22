@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Planet Bonk</title>
-<meta name="description" content="같은 행성끼리 부딪혀 작게 만들고, 달끼리 부딪혀 없애는 우주 게임">
+<meta name="description" content="Bonk matching planets together to shrink them, and bonk two Moons to make them vanish. A space physics game.">
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-title" content="Planet Bonk">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -167,16 +167,16 @@ if('serviceWorker' in navigator){
   // 같은 행성끼리 부딪히면 tier-1로 축소, tier 0(달)끼리는 소멸
   // color: 불꽃·후광·이름표에 쓰는 대표색 (행성 그림 자체는 makeTexture에서 그림)
   const PLANETS=[
-    {name:'달',     color:'#e6e9ef', size:0.60},
-    {name:'수성',   color:'#b39a84', size:0.73},
-    {name:'화성',   color:'#e8602f', size:0.88},
-    {name:'금성',   color:'#f2c46d', size:1.06},
-    {name:'지구',   color:'#4a90ee', size:1.29},
-    {name:'해왕성', color:'#5c7cf0', size:1.56},
-    {name:'천왕성', color:'#8ee3ef', size:1.88},
-    {name:'토성',   color:'#ead39c', size:2.28},
-    {name:'목성',   color:'#dda56c', size:2.76},
-    {name:'태양',   color:'#ffd23b', size:4.50}
+    {name:'Moon',    color:'#e6e9ef', size:0.60},
+    {name:'Mercury', color:'#b39a84', size:0.73},
+    {name:'Mars',    color:'#e8602f', size:0.88},
+    {name:'Venus',   color:'#f2c46d', size:1.06},
+    {name:'Earth',   color:'#4a90ee', size:1.29},
+    {name:'Neptune', color:'#5c7cf0', size:1.56},
+    {name:'Uranus',  color:'#8ee3ef', size:1.88},
+    {name:'Saturn',  color:'#ead39c', size:2.28},
+    {name:'Jupiter', color:'#dda56c', size:2.76},
+    {name:'Sun',     color:'#ffd23b', size:4.50}
   ];
 
   const FRICTION_KEEP = 0.988;
@@ -555,7 +555,7 @@ if('serviceWorker' in navigator){
     overlayStats.innerHTML='POPPED&nbsp;&nbsp;'+popped+'&nbsp;&nbsp;·&nbsp;&nbsp;LEVEL&nbsp;&nbsp;'+level
       +'<br><br><span style="letter-spacing:0.25em">TOP&nbsp;5</span><br>'+rows;
     overlayHint.style.display='block';
-    overlayHint.textContent='행성이 아래 라인을 넘어갔습니다.';
+    overlayHint.textContent='A planet fell past the bottom line.';
     startBtn.textContent='RETRY';
     overlay.classList.remove('hidden');
     sound(140, 0.5, 'sawtooth', 0.18);
@@ -1078,8 +1078,11 @@ if('serviceWorker' in navigator){
     ctx.font=Math.min(W*0.12,44)+'px "Special Elite", monospace';
     ctx.textAlign='center';
     ctx.shadowColor='#fff'; ctx.shadowBlur=16;
-    const t = level<=PLANETS.length ? 'LEVEL '+level+' · '+PLANETS[Math.min(level,PLANETS.length)-1].name+' 해금' : 'LEVEL '+level;
-    ctx.fillText(t, W/2, H*0.5);
+    ctx.fillText('LEVEL '+level, W/2, H*0.5);
+    if(level<=PLANETS.length){
+      ctx.font=Math.min(W*0.06,22)+'px "Special Elite", monospace';
+      ctx.fillText(PLANETS[level-1].name.toUpperCase()+' UNLOCKED', W/2, H*0.5+Math.min(W*0.1,38));
+    }
     ctx.restore();
   }
 
@@ -1150,13 +1153,13 @@ if('serviceWorker' in navigator){
   window.addEventListener('beforeunload', saveProgress);
 
   const HELP = [
-    '화면을 누른 채 손가락을 움직여 조준하고, 손을 떼면 발사됩니다. 발사대에서 먼 곳을 누를수록 세게 나갑니다.',
-    '같은 행성끼리 부딪히면 둘 다 한 단계 작은 행성이 됩니다. 가만히 닿아 있기만 하면 변하지 않습니다.',
-    '크기 순서: 달 < 수성 < 화성 < 금성 < 지구 < 해왕성 < 천왕성 < 토성 < 목성 < 태양',
-    '가장 작은 달끼리 부딪히면 사라집니다.',
-    '큰 행성일수록 무거워서 천천히 날아가고, 잘 밀리지 않습니다.',
-    '행성이 작아질 때마다 UNTIL NEXT LEVEL이 1씩 줄고, 0이 되면 레벨이 오르며 더 큰 행성이 나옵니다.',
-    '행성이 아래 선 밖으로 완전히 빠져나가면 게임 오버입니다.'
+    'Touch and drag to aim, then let go to launch. The farther from the launcher you aim, the harder the shot.',
+    'When two of the same planet bonk together, both shrink into the next smaller planet. Just resting against each other does nothing.',
+    'Size order: Moon < Mercury < Mars < Venus < Earth < Neptune < Uranus < Saturn < Jupiter < Sun',
+    'Bonk two Moons together and they vanish.',
+    'Bigger planets are heavier: they fly slower and are harder to push.',
+    'Every time a planet shrinks, UNTIL NEXT LEVEL drops by 1. At 0 you level up and bigger planets start to appear.',
+    'If a planet rolls all the way past the bottom line, the game is over.'
   ];
   function onSettingChange(key, val){
     if(key==='music' && bgm.isOn()!==val) bgm.toggle();

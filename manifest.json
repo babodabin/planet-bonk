@@ -1,7 +1,7 @@
 {
   "name": "Planet Bonk",
   "short_name": "Planet Bonk",
-  "description": "같은 행성끼리 부딪혀 작게 만들고, 달끼리 부딪혀 없애는 우주 게임",
+  "description": "Bonk matching planets together to shrink them, and bonk two Moons to make them vanish. A space physics game.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "fullscreen",
