@@ -116,6 +116,37 @@
     border-bottom:1px solid #3a3f3f; padding-bottom:2px;
   }
   .ov-links span:active { color:#fff; }
+  #overlay button#guide-btn {
+    order:3; margin-top:16px;
+    background:transparent; color:#e8eaea; border:1px solid rgba(255,255,255,0.55);
+    box-shadow:0 0 10px rgba(255,255,255,0.15); padding:9px 26px;
+  }
+
+  /* 새 행성 카드 · 도감 (공통 모달 안에 들어감) */
+  .pb-card { display:flex; flex-direction:column; align-items:center; gap:10px; text-align:center; }
+  .pb-card canvas { width:140px; height:140px; }
+  .pb-name { font-family:'Special Elite',monospace; font-size:24px; letter-spacing:0.14em; color:#e8eaea; }
+  .pb-type { font-family:-apple-system,'Segoe UI',sans-serif; font-size:12px; letter-spacing:0.08em; color:#8a9090; text-transform:uppercase; }
+  .pb-fact { font-family:-apple-system,'Segoe UI',sans-serif; font-size:15px; line-height:1.55; color:#d5dada; }
+  .pb-size { font-family:-apple-system,'Segoe UI',sans-serif; font-size:13px; color:#9fc4ff; }
+  .pb-count { font-family:'Special Elite',monospace; text-align:center; font-size:15px; letter-spacing:0.12em; color:#c8cccc; }
+  .pb-note { font-family:-apple-system,'Segoe UI',sans-serif; text-align:center; font-size:11px; color:#6c7171; margin-top:-8px; }
+  .pb-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+  .pb-cell {
+    display:flex; flex-direction:column; align-items:center; gap:4px; padding:8px 2px 6px;
+    border:1px solid #2a2f2f; border-radius:8px; background:rgba(255,255,255,0.02); cursor:pointer;
+  }
+  .pb-cell:active { transform:scale(0.97); }
+  .pb-cell.locked { cursor:default; }
+  .pb-cell canvas { width:56px; height:56px; }
+  .pb-cell span { font-family:-apple-system,'Segoe UI',sans-serif; font-size:11px; color:#c8cccc; }
+  .pb-cell.locked span { color:#4e5454; }
+  .pb-facts { font-family:-apple-system,'Segoe UI',sans-serif; font-size:14px; line-height:1.6; color:#c8cccc;
+    display:flex; flex-direction:column; gap:8px; text-align:left; align-self:stretch; }
+  .pb-facts p { position:relative; padding-left:14px; }
+  .pb-facts p::before { content:'•'; position:absolute; left:0; color:#6c7171; }
+  .pb-back { font-family:'Special Elite',monospace; font-size:13px; letter-spacing:0.14em; color:#9a9f9f;
+    background:none; border:1px solid #3a3f3f; border-radius:6px; padding:6px 16px; cursor:pointer; align-self:center; }
 </style>
 </head>
 <body>
@@ -145,6 +176,7 @@
   <div class="hint" id="overlay-hint" style="display:none"></div>
   <button id="start-btn">START</button>
   <button id="resume-btn" style="display:none;">CONTINUE</button>
+  <button id="guide-btn">MY PLANETS</button>
   <div class="ov-links">
     <span id="help-link">HOW&nbsp;TO&nbsp;PLAY</span>
     <span id="settings-link">SETTINGS</span>
@@ -353,22 +385,27 @@ if('serviceWorker' in navigator){
     while(queue.length<4) queue.push(randTier());
     renderQueue();
   }
-  // 대기열도 필드와 같은 방식으로 그림 (큰 행성일수록 조금 크게, 고리·빛까지 칸 안에 들어가게)
-  function paintQueuePlanet(cv, tier){
-    const css = cv.clientWidth || 32;
+  // 작은 캔버스(대기열·카드·도감)에 필드와 같은 방식으로 행성을 그림. 돌려주는 draw(rot, t)로 자전시킬 수 있음
+  // fill=false: 큰 행성일수록 조금 크게 (대기열) / fill=true: 모두 칸에 꽉 차게 (카드·도감)
+  function planetPainter(cv, tier, css, fill){
+    css = css || cv.clientWidth || 32;
     const d = Math.min(window.devicePixelRatio||1, 2);
     cv.width = Math.round(css*d); cv.height = Math.round(css*d);
     const pad = tier===9 ? 1.75 : padOf(tier);
-    const r = Math.min(css*0.42*Math.min(1, 0.55+0.16*PLANETS[tier].size), css/2/pad);
+    const r = fill ? css/2/pad*0.94 : Math.min(css*0.42*Math.min(1, 0.55+0.16*PLANETS[tier].size), css/2/pad);
     const tex = texture(tier), map = sphereMap(Math.max(3, Math.round(r*d)), tex, tier===9);
     const surf = document.createElement('canvas'); surf.width = surf.height = map.size;
     const sc = surf.getContext('2d'), img = sc.createImageData(map.size, map.size);
-    paintSurface(map, tex, 0, img); sc.putImageData(img, 0, 0);
     const c = cv.getContext('2d');
-    c.setTransform(d,0,0,d, css*d/2, css*d/2);
-    if(tier===9) sunCorona(c, r, 0);
-    composePlanet(c, tier, r, surf);
+    return function draw(rot, t){
+      paintSurface(map, tex, (rot||0)*tex.w, img); sc.putImageData(img, 0, 0);
+      c.setTransform(1,0,0,1,0,0); c.clearRect(0,0,cv.width,cv.height);
+      c.setTransform(d,0,0,d, css*d/2, css*d/2);
+      if(tier===9) sunCorona(c, r, t||0);
+      composePlanet(c, tier, r, surf);
+    };
   }
+  function paintQueuePlanet(cv, tier){ planetPainter(cv, tier)(0, 0); }
   function renderQueue(){
     paintQueuePlanet(launcherBallEl, queue[0]);
     const ln=document.getElementById('launcher-name');
@@ -523,6 +560,7 @@ if('serviceWorker' in navigator){
       sound(660, 0.3, 'sine', 0.18); JPI.vibrate([30,60,30]);
       flashLevel=1;
       saveProgress();
+      discoverAvailable();
     }
   }
 
@@ -556,7 +594,17 @@ if('serviceWorker' in navigator){
       +'<br><br><span style="letter-spacing:0.25em">TOP&nbsp;5</span><br>'+rows;
     overlayHint.style.display='block';
     overlayHint.textContent='A planet fell past the bottom line.';
+    const tip=randomFact();
+    if(tip){
+      const dyk=document.createElement('div');
+      dyk.style.cssText='margin-top:10px;color:#9fc4ff;';
+      dyk.textContent='Did you know? '+tip;
+      overlayHint.appendChild(dyk);
+    }
     startBtn.textContent='RETRY';
+    startBtn.classList.remove('secondary'); startBtn.style.order='0';
+    resumeBtn.style.display='none';   // 끝난 게임은 이어할 수 없음
+    renderGuideBtn();
     overlay.classList.remove('hidden');
     sound(140, 0.5, 'sawtooth', 0.18);
     JPI.vibrate(160);
@@ -1136,6 +1184,7 @@ if('serviceWorker' in navigator){
       startBtn.classList.remove('secondary');
       startBtn.style.order='0';
     }
+    renderGuideBtn();
     overlay.classList.remove('hidden');
   }
   function beginGame(fresh){
@@ -1145,6 +1194,7 @@ if('serviceWorker' in navigator){
     if(fresh){ newGame(); }
     else { const saved=loadProgress(); if(saved) restoreGame(saved); else newGame(); }
     if(JPI.on('music')!==bgm.isOn()) bgm.toggle();
+    discoverAvailable();
   }
 
   // 앱을 끄거나 뒤로 가는 등 화면을 벗어날 때 즉시 저장
@@ -1175,6 +1225,169 @@ if('serviceWorker' in navigator){
     saveProgress();   // 진행 상태를 저장한 뒤 시작 화면으로 (CONTINUE로 이어하기)
     showMenu();
   });
+
+  // ───────── 행성 도감 (MY PLANETS) ─────────
+  // 사실은 확인된 내용만. 게임 속 크기는 실제 비율이 아니므로 실제 크기는 size 줄로 따로 알려줌
+  const FACTS=[
+    {type:"Earth's moon · not a planet", size:'About 1/4 as wide as Earth', facts:[
+      'The same side of the Moon always faces Earth.',
+      'Twelve astronauts walked on the Moon between 1969 and 1972.',
+      'The Moon drifts about 4 cm farther from Earth every year.']},
+    {type:'Planet · 1st from the Sun', size:'About 0.4× as wide as Earth', facts:[
+      'Mercury is the smallest planet and the closest to the Sun.',
+      'A year on Mercury lasts only 88 Earth days.',
+      'Mercury has no moons.']},
+    {type:'Planet · 4th from the Sun', size:'About half as wide as Earth', facts:[
+      'Mars looks red because its dust is full of rust (iron oxide).',
+      'Mars has the tallest volcano in the solar system, Olympus Mons.',
+      'Mars has two small moons, Phobos and Deimos.']},
+    {type:'Planet · 2nd from the Sun', size:'Almost as wide as Earth', facts:[
+      'Venus is the hottest planet: its thick clouds trap heat like a blanket.',
+      'A day on Venus is longer than its year.',
+      'Venus spins the opposite way to most planets.']},
+    {type:'Planet · 3rd from the Sun', size:'Our home: the yardstick for this guide', facts:[
+      'Earth is the only planet known to have life.',
+      'About 71% of Earth is covered by water.',
+      'Earth is the only planet not named after a god.']},
+    {type:'Planet · 8th from the Sun', size:'About 3.9× as wide as Earth', facts:[
+      'Neptune is the farthest planet from the Sun.',
+      'Neptune has the fastest winds in the solar system: over 2,000 km/h.',
+      'One trip around the Sun takes Neptune about 165 Earth years.']},
+    {type:'Planet · 7th from the Sun', size:'About 4× as wide as Earth', facts:[
+      'Uranus spins on its side, tipped over by about 98 degrees.',
+      'Uranus was the first planet found with a telescope, in 1781.',
+      'Uranus has 13 faint rings.']},
+    {type:'Planet · 6th from the Sun', size:'About 9× as wide as Earth', facts:[
+      "Saturn's rings are made mostly of chunks of ice.",
+      'Saturn is so light for its size that it would float in a giant bathtub.',
+      'Saturn has more known moons than any other planet.']},
+    {type:'Planet · 5th from the Sun', size:'About 11× as wide as Earth', facts:[
+      'Jupiter is the biggest planet: more than twice as heavy as all the others combined.',
+      "Jupiter's Great Red Spot is a storm wider than Earth.",
+      'A day on Jupiter lasts less than 10 hours.']},
+    {type:'A star · not a planet', size:'About 109× as wide as Earth', facts:[
+      'The Sun holds over 99.8% of all the mass in the solar system.',
+      'Sunlight takes about 8 minutes to reach Earth.',
+      'The Sun is made mostly of hydrogen and helium.']}
+  ];
+  const GUIDE_KEY='pb-guide';
+  function loadGuide(){
+    try{ const g=JSON.parse(localStorage.getItem(GUIDE_KEY)); if(Array.isArray(g)) return g; }catch(e){}
+    return [];
+  }
+  function isFound(t){ return loadGuide().includes(t); }
+  function markFound(t){
+    const g=loadGuide();
+    if(!g.includes(t)){ g.push(t); try{ localStorage.setItem(GUIDE_KEY, JSON.stringify(g)); }catch(e){} }
+  }
+  function foundCount(){ return loadGuide().filter(t=>t>=0 && t<PLANETS.length).length; }
+  function randomFact(){
+    const g=loadGuide().filter(t=>FACTS[t]);
+    if(!g.length) return '';
+    const f=FACTS[g[Math.floor(Math.random()*g.length)]].facts;
+    return f[Math.floor(Math.random()*f.length)];
+  }
+  function renderGuideBtn(){
+    document.getElementById('guide-btn').textContent='MY PLANETS  '+foundCount()+' / '+PLANETS.length;
+  }
+
+  // 지금 레벨에서 나올 수 있는데 처음 보는 행성이면 카드로 소개 (카드가 떠 있는 동안 게임은 멈춤)
+  let cardQueue=[], cardOpen=false;
+  function discoverAvailable(){
+    for(let t=0;t<=maxTier();t++){
+      if(!isFound(t) && !cardQueue.includes(t)){ markFound(t); cardQueue.push(t); }
+    }
+    nextCard();
+  }
+  function nextCard(){
+    if(cardOpen || !cardQueue.length) return;
+    cardOpen=true;
+    showPlanetCard(cardQueue.shift(), ()=>{ cardOpen=false; nextCard(); });
+  }
+  function spinner(cv, tier, css){
+    const draw=planetPainter(cv, tier, css, true);
+    const period=PERIOD[tier]||40, t0=performance.now();
+    let alive=true;
+    (function frame(){
+      if(!alive || !cv.isConnected){ alive=false; return; }
+      const s=(performance.now()-t0)/1000;
+      draw(s/period*2, s);
+      requestAnimationFrame(frame);
+    })();
+    return ()=>{ alive=false; };
+  }
+  function detailView(tier, big){
+    const p=PLANETS[tier], f=FACTS[tier];
+    const wrap=document.createElement('div'); wrap.className='pb-card';
+    const cv=document.createElement('canvas'); cv.style.width=cv.style.height=big+'px';
+    const name=document.createElement('div'); name.className='pb-name'; name.textContent=p.name.toUpperCase();
+    const type=document.createElement('div'); type.className='pb-type'; type.textContent=f.type;
+    const size=document.createElement('div'); size.className='pb-size'; size.textContent=f.size;
+    wrap.append(cv, name, type, size);
+    return { wrap, cv, f };
+  }
+  function showPlanetCard(tier, onDone){
+    const v=detailView(tier, 140);
+    const fact=document.createElement('div'); fact.className='pb-fact'; fact.textContent=v.f.facts[0];
+    v.wrap.appendChild(fact);
+    let stop=()=>{};
+    JPI.modal('NEW DISCOVERY', v.wrap, ()=>{ stop(); renderGuideBtn(); if(onDone) onDone(); }, 'CONTINUE');
+    stop=spinner(v.cv, tier, 140);
+    sound(880, 0.25, 'sine', 0.16);
+  }
+  function openGuide(){
+    const body=document.createElement('div');
+    body.style.cssText='display:flex;flex-direction:column;gap:14px;';
+    let stop=()=>{};
+    JPI.modal('MY PLANETS', body, ()=>stop());
+    function grid(){
+      stop(); body.innerHTML='';
+      const count=document.createElement('div'); count.className='pb-count';
+      count.textContent=foundCount()+' / '+PLANETS.length+' DISCOVERED';
+      const note=document.createElement('div'); note.className='pb-note';
+      note.textContent='Planet sizes in the game are not to scale.';
+      const g=document.createElement('div'); g.className='pb-grid';
+      body.append(count, note, g);
+      for(let t=0;t<PLANETS.length;t++){
+        const cell=document.createElement('div'); cell.className='pb-cell';
+        const cv=document.createElement('canvas');
+        const label=document.createElement('span');
+        cell.append(cv, label); g.appendChild(cell);
+        if(isFound(t)){
+          label.textContent=PLANETS[t].name;
+          planetPainter(cv, t, 56, true)(0, 0);
+          cell.addEventListener('click', ()=>detail(t));
+        }else{
+          cell.classList.add('locked');
+          label.textContent='???';
+          lockedIcon(cv, 56);
+        }
+      }
+    }
+    function detail(t){
+      stop(); body.innerHTML='';
+      const v=detailView(t, 120);
+      const list=document.createElement('div'); list.className='pb-facts';
+      for(const s of v.f.facts){ const p=document.createElement('p'); p.textContent=s; list.appendChild(p); }
+      const back=document.createElement('button'); back.className='pb-back'; back.textContent='◀ ALL PLANETS';
+      back.addEventListener('click', grid);
+      v.wrap.append(list, back);
+      body.appendChild(v.wrap);
+      stop=spinner(v.cv, t, 120);
+    }
+    grid();
+  }
+  function lockedIcon(cv, css){
+    const d=Math.min(window.devicePixelRatio||1, 2);
+    cv.width=cv.height=Math.round(css*d);
+    const c=cv.getContext('2d'); c.setTransform(d,0,0,d,css*d/2,css*d/2);
+    const r=css*0.36;
+    c.fillStyle='#0d1010'; c.beginPath(); c.arc(0,0,r,0,Math.PI*2); c.fill();
+    c.strokeStyle='#2f3535'; c.lineWidth=1.5; c.stroke();
+    c.fillStyle='#4e5454'; c.font=(r*1.1)+'px "Special Elite", monospace';
+    c.textAlign='center'; c.textBaseline='middle'; c.fillText('?',0,2);
+  }
+  document.getElementById('guide-btn').addEventListener('click', openGuide);
 
   // 시작 시: 저장본 있으면 '이어하기' 메뉴 표시
   showMenu();

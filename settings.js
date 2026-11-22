@@ -45,12 +45,12 @@
     document.head.appendChild(s);
   }
 
-  function modal(title, body, onClose){
+  function modal(title, body, onClose, closeLabel){
     injectCss();
     const back=document.createElement('div'); back.className='jpi-modal';
     const box=document.createElement('div'); box.className='jpi-box';
     const h=document.createElement('div'); h.className='jpi-title'; h.textContent=title;
-    const close=document.createElement('button'); close.className='jpi-close'; close.textContent='CLOSE';
+    const close=document.createElement('button'); close.className='jpi-close'; close.textContent=closeLabel||'CLOSE';
     box.append(h, body, close);
     back.appendChild(box);
     openCount++;
@@ -110,5 +110,5 @@
     return true;
   }
 
-  window.JPI = { on, set, vibrate, canVibrate, isOpen, openSettings, openHelp, helpOnce };
+  window.JPI = { on, set, vibrate, canVibrate, isOpen, modal, openSettings, openHelp, helpOnce };
 })();
