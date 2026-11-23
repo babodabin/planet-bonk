@@ -1,9 +1,10 @@
 // Planet Bonk — 오프라인 캐시
-const CACHE = 'pb-v1';
+const CACHE = 'pb-v2';
 const ASSETS = [
   './',
   './index.html',
   './settings.js',
+  './leaderboard.js',
   './manifest.json',
   './icon-180.png',
   './icon-192.png',
@@ -28,6 +29,11 @@ self.addEventListener('activate', e => {
 // HTML·JS는 네트워크 우선(최신 코드 반영), 나머지는 캐시 우선
 self.addEventListener('fetch', e => {
   const req = e.request;
+  // 순위표 서버(Firebase)와의 통신은 캐시를 거치지 않음. 글꼴·Firebase 프로그램 파일만 캐시
+  if (req.method !== 'GET') return;
+  const host = new URL(req.url).hostname;
+  if (new URL(req.url).origin !== self.location.origin
+      && !/(^|\.)(gstatic\.com|fonts\.googleapis\.com)$/.test(host)) return;
   const isHTML = req.mode === 'navigate' || (req.headers.get('accept')||'').includes('text/html');
   const isJS = new URL(req.url).pathname.endsWith('.js');
   if (isHTML || isJS) {
