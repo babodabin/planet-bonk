@@ -130,6 +130,19 @@
     background:transparent; color:#ffd98a; border:1px solid rgba(255,210,120,0.6);
     box-shadow:0 0 10px rgba(255,200,90,0.18); padding:9px 26px;
   }
+  /* 시작 화면(menu)과 게임 오버(over)에 보이는 것을 나눔 */
+  #overlay[data-mode="over"] #guide-btn,
+  #overlay[data-mode="over"] #rank-btn,
+  #overlay[data-mode="over"] .ov-links,
+  #overlay[data-mode="menu"] #back-btn { display:none; }
+  #overlay button#back-btn { order:1; margin-top:10px; padding:8px 28px; font-size:clamp(13px,3.4vw,15px); }
+  /* 메뉴가 떠 있을 때는 아래 바의 SETTINGS·MENU를 숨김 (메뉴 안의 것과 겹치지 않게) */
+  body.ov-open #settings-btn, body.ov-open #menu-btn { visibility:hidden; }
+  .go-score { font-size:clamp(54px,16vw,76px); line-height:1.05; color:#e8eaea; letter-spacing:0.04em;
+    text-shadow:0 0 16px rgba(255,255,255,0.35); }
+  .go-sub { font-size:clamp(13px,3.6vw,16px); letter-spacing:0.18em; color:#8a9090; }
+  .go-best { font-size:clamp(14px,3.8vw,17px); letter-spacing:0.18em; color:#9fe0a6; margin-top:4px;
+    text-shadow:0 0 10px rgba(120,230,140,0.45); }
   #rank-line {
     font-family:-apple-system,'Segoe UI',sans-serif; text-align:center; line-height:1.6;
     font-size:clamp(13px,3.6vw,15px); color:#ffd98a; margin:4px 0 6px; max-width:300px;
@@ -146,7 +159,7 @@
   /* 순위표 · 닉네임 창 */
   .rk-tabs { display:flex; gap:6px; }
   .rk-tabs button {
-    flex:1; font-family:'Special Elite',monospace; font-size:13px; letter-spacing:0.12em;
+    flex:1; font-family:'Special Elite',monospace; font-size:12px; letter-spacing:0.05em;
     padding:7px 4px; border-radius:6px; cursor:pointer;
     background:transparent; color:#7a8080; border:1px solid #3a3f3f;
   }
@@ -247,9 +260,9 @@
   <button id="start-btn">START</button>
   <button id="resume-btn" style="display:none;">CONTINUE</button>
   <button id="guide-btn">MY PLANETS</button>
-  <button id="rank-btn">WORLD RANKING</button>
+  <button id="rank-btn">RANKING</button>
+  <button id="back-btn" class="secondary">MENU</button>
   <div class="ov-links">
-    <span id="help-link">HOW&nbsp;TO&nbsp;PLAY</span>
     <span id="settings-link">SETTINGS</span>
   </div>
 </div></div>
@@ -651,33 +664,34 @@ if('serviceWorker' in navigator){
     }
   }
 
+  // 메뉴 화면 열고 닫기. mode: 'menu'(시작 화면) | 'over'(게임 오버)
+  function showOverlay(mode){
+    overlay.dataset.mode=mode;
+    document.body.classList.add('ov-open');
+    overlay.classList.remove('hidden');
+  }
+  function hideOverlay(){
+    document.body.classList.remove('ov-open');
+    overlay.classList.add('hidden');
+  }
+
+  // 게임 오버: 이번 점수와 세계 순위만 크게. 지난 기록(TOP 5)은 RANKING → MY BEST에서 봄
   function endGame(){
     running=false;
     clearProgress();
+    let prevBest=0; try{ prevBest=parseInt(localStorage.getItem('pb-record'))||0; }catch(e){}
     saveScore();
     overlayTitle.textContent='GAME OVER';
     overlayStats.style.display='block';
-    const h=loadHistory();
-    let rows='';
-    for(let i=0;i<h.length;i++){
-      rows += (i+1)+'.&nbsp;&nbsp;'+h[i].s+'&nbsp;&nbsp;<span style="font-size:0.75em;color:#6c7171">LV '+h[i].l+' · '+h[i].d+'</span><br>';
-    }
-    overlayStats.innerHTML='POPPED&nbsp;&nbsp;'+popped+'&nbsp;&nbsp;·&nbsp;&nbsp;LEVEL&nbsp;&nbsp;'+level
-      +'<br><br><span style="letter-spacing:0.25em">TOP&nbsp;5</span><br>'+rows;
-    overlayHint.style.display='block';
-    overlayHint.textContent='';
-    const tip=randomFact();
-    if(tip){
-      const dyk=document.createElement('div');
-      dyk.style.cssText='color:#9fc4ff;';
-      dyk.textContent='Did you know? '+tip;
-      overlayHint.appendChild(dyk);
-    }
+    overlayStats.innerHTML='<div class="go-score">'+popped+'</div>'
+      +'<div class="go-sub">SCORE · LEVEL '+level+'</div>'
+      +(popped>prevBest && popped>0 ? '<div class="go-best">NEW BEST!</div>' : '<div class="go-sub">BEST '+record+'</div>');
+    overlayHint.style.display='none';
     startBtn.textContent='RETRY';
     startBtn.classList.remove('secondary'); startBtn.style.order='0';
     resumeBtn.style.display='none';   // 끝난 게임은 이어할 수 없음
     renderGuideBtn();
-    overlay.classList.remove('hidden');
+    showOverlay('over');
     rankAfterGame(popped, level);
     sound(140, 0.5, 'sawtooth', 0.18);
     JPI.vibrate(160);
@@ -1259,10 +1273,10 @@ if('serviceWorker' in navigator){
       startBtn.style.order='0';
     }
     renderGuideBtn();
-    overlay.classList.remove('hidden');
+    showOverlay('menu');
   }
   function beginGame(fresh){
-    overlay.classList.add('hidden');
+    hideOverlay();
     overlayStats.style.display='none';
     resize();
     if(fresh){ newGame(); }
@@ -1291,9 +1305,10 @@ if('serviceWorker' in navigator){
 
   startBtn.addEventListener('click', ()=>{ clearProgress(); JPI.helpOnce('game', 'HOW TO PLAY', HELP, ()=>beginGame(true)); });
   resumeBtn.addEventListener('click', ()=>{ beginGame(false); });
-  document.getElementById('help-link').addEventListener('click', ()=>JPI.openHelp('HOW TO PLAY', HELP));
-  document.getElementById('settings-link').addEventListener('click', ()=>JPI.openSettings(onSettingChange));
-  settingsBtn.addEventListener('click', ()=>{ aiming=false; JPI.openSettings(onSettingChange); });
+  document.getElementById('back-btn').addEventListener('click', showMenu);
+  const HELP_ITEM={ title:'HOW TO PLAY', lines:HELP };
+  document.getElementById('settings-link').addEventListener('click', ()=>JPI.openSettings(onSettingChange, HELP_ITEM));
+  settingsBtn.addEventListener('click', ()=>{ aiming=false; JPI.openSettings(onSettingChange, HELP_ITEM); });
   menuBtn.addEventListener('click', ()=>{
     aiming=false;
     saveProgress();   // 진행 상태를 저장한 뒤 시작 화면으로 (CONTINUE로 이어하기)
@@ -1355,12 +1370,6 @@ if('serviceWorker' in navigator){
     if(!g.includes(t)){ g.push(t); try{ localStorage.setItem(GUIDE_KEY, JSON.stringify(g)); }catch(e){} }
   }
   function foundCount(){ return loadGuide().filter(t=>t>=0 && t<PLANETS.length).length; }
-  function randomFact(){
-    const g=loadGuide().filter(t=>FACTS[t]);
-    if(!g.length) return '';
-    const f=FACTS[g[Math.floor(Math.random()*g.length)]].facts;
-    return f[Math.floor(Math.random()*f.length)];
-  }
   function renderGuideBtn(){
     document.getElementById('guide-btn').textContent='MY PLANETS  '+foundCount()+' / '+PLANETS.length;
   }
@@ -1513,18 +1522,15 @@ if('serviceWorker' in navigator){
   function openRanking(){
     const body=document.createElement('div');
     body.style.cssText='display:flex;flex-direction:column;gap:14px;';
-    JPI.modal('WORLD RANKING', body);
-    if(!PBRank.enabled()){
-      const m=document.createElement('div'); m.className='rk-msg';
-      m.textContent='The world ranking is coming soon. Your best scores are saved on this device.';
-      body.appendChild(m);
-      return;
-    }
-    let which='week';
+    JPI.modal('RANKING', body);
+    const online=PBRank.enabled();
+    // 세 칸: 이번 주(세계) / 전체(세계) / 내 기록(이 기기의 최고 5판)
+    let which = online ? 'week' : 'mine';
     const tabs=document.createElement('div'); tabs.className='rk-tabs';
     const tWeek=document.createElement('button'); tWeek.textContent='THIS WEEK';
     const tAll=document.createElement('button'); tAll.textContent='ALL TIME';
-    tabs.append(tWeek, tAll);
+    const tMine=document.createElement('button'); tMine.textContent='MY BEST';
+    tabs.append(tWeek, tAll, tMine);
     const note=document.createElement('div'); note.className='rk-note';
     const you=document.createElement('div'); you.className='rk-you';
     const list=document.createElement('div'); list.className='rk-list';
@@ -1532,6 +1538,19 @@ if('serviceWorker' in navigator){
     body.append(tabs, note, you, list, me);
     tWeek.addEventListener('click', ()=>{ which='week'; load(); });
     tAll.addEventListener('click', ()=>{ which='all'; load(); });
+    tMine.addEventListener('click', ()=>{ which='mine'; load(); });
+
+    function showMine(){
+      note.textContent='Your top 5 games on this device.';
+      you.style.display='none';
+      list.innerHTML='';
+      const h=loadHistory();
+      if(!h.length){ list.innerHTML='<div class="rk-msg">No games yet. Press START to play!</div>'; return; }
+      h.forEach((g,i)=>{
+        const row=rankRow(i+1, { name:'LEVEL '+g.l+'  ·  '+g.d, score:g.s }, false);
+        list.appendChild(row);
+      });
+    }
 
     function renderMe(){
       me.innerHTML='';
@@ -1556,6 +1575,14 @@ if('serviceWorker' in navigator){
       const my=++seq;
       tWeek.classList.toggle('on', which==='week');
       tAll.classList.toggle('on', which==='all');
+      tMine.classList.toggle('on', which==='mine');
+      me.style.display = online ? '' : 'none';
+      if(which==='mine'){ seq++; showMine(); return; }
+      if(!online){
+        note.textContent=''; you.style.display='none';
+        list.innerHTML='<div class="rk-msg">The world ranking is coming soon.<br>Your own records are in MY BEST.</div>';
+        return;
+      }
       note.textContent = which==='week' ? 'Resets every Monday (UTC). Top '+PBRank.TOP_N+' shown.' : 'Best scores of all time. Top '+PBRank.TOP_N+' shown.';
       list.innerHTML='<div class="rk-msg">Loading…</div>';
       you.style.display='none';
@@ -1597,7 +1624,7 @@ if('serviceWorker' in navigator){
         list.appendChild(m);
       }
     }
-    renderMe();
+    if(online) renderMe();
     load();
   }
   document.getElementById('rank-btn').addEventListener('click', openRanking);

@@ -37,7 +37,9 @@
   .jpi-close{align-self:center;font-family:'Special Elite',monospace;font-size:15px;letter-spacing:0.16em;
     color:#000;background:#e8eaea;border:none;border-radius:4px;padding:9px 30px;cursor:pointer;
     box-shadow:0 0 14px rgba(255,255,255,0.35);}
-  .jpi-close:active,.jpi-toggle:active{transform:translateY(1px);}
+  .jpi-extra{margin-top:6px;font-family:'Special Elite',monospace;font-size:14px;letter-spacing:0.14em;
+    color:#c8cccc;background:transparent;border:1px solid #3a3f3f;border-radius:6px;padding:9px;cursor:pointer;}
+  .jpi-close:active,.jpi-toggle:active,.jpi-extra:active{transform:translateY(1px);}
   `;
   function injectCss(){
     if(document.getElementById('jpi-modal-css')) return;
@@ -66,7 +68,8 @@
   }
 
   // onChange(name, value): 화면마다 배경음악을 켜고 끄는 등 즉시 반영할 일을 처리
-  function openSettings(onChange){
+  // help: { title, lines } 를 주면 맨 아래에 게임 방법 버튼이 생김
+  function openSettings(onChange, help){
     const list=document.createElement('div'); list.className='jpi-list';
     const rows=[['music','Music'],['sfx','Sound effects'],['vibe','Vibration']];
     for(const [key,label] of rows){
@@ -89,6 +92,11 @@
       render();
       row.append(name, btn);
       list.appendChild(row);
+    }
+    if(help){
+      const b=document.createElement('button'); b.className='jpi-extra'; b.textContent=help.title;
+      b.addEventListener('click', ()=>openHelp(help.title, help.lines));
+      list.appendChild(b);
     }
     return modal('SETTINGS', list);
   }
