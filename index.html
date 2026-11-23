@@ -72,7 +72,10 @@
 
   #overlay {
     position:fixed; inset:0; z-index:10;
-    display:flex; flex-direction:column; justify-content:center; align-items:center; gap:20px;
+    display:flex; flex-direction:column; justify-content:center; align-items:center;
+    /* 아래 바(NEXT·RECORD)와 겹치지 않게 게임판 높이 안에서만 가운데 정렬 */
+    padding:calc(max(env(safe-area-inset-top, 0px), 52px) + 26px) 12px calc(env(safe-area-inset-bottom, 0px) + 126px);
+    overflow:hidden;
     background:rgba(0,0,0,0.6);   /* 반투명: 뒤의 우주가 비침 */
     transition:opacity .3s ease;
   }
@@ -83,7 +86,7 @@
     letter-spacing:0.1em; text-align:center;
     text-shadow:0 0 14px rgba(255,255,255,0.35);
   }
-  #overlay .stats { font-size:clamp(16px, 4.5vw, 22px); letter-spacing:0.15em; text-align:center; line-height:1.9; color:#9a9f9f; }
+  #overlay .stats { font-size:clamp(15px, 4.2vw, 20px); letter-spacing:0.15em; text-align:center; line-height:1.55; color:#9a9f9f; }
   #overlay .hint {
     font-family:-apple-system,'Apple SD Gothic Neo',sans-serif;
     font-size:clamp(12px, 3.4vw, 14px); color:#6c7171;
@@ -104,13 +107,13 @@
     padding:7px 18px; box-shadow:none; margin-top:14px;
   }
   #overlay button.secondary:active { transform:translateY(1px); color:#aab0b0; }
-  #overlay { gap:8px; }
+  #ov-inner { display:flex; flex-direction:column; align-items:center; gap:8px; transform-origin:center center; }
   #classic-link {
     color:#6c7171; font-size:clamp(13px,3.8vw,16px); letter-spacing:0.15em;
     text-decoration:none; cursor:pointer;
   }
   #classic-link:active { color:#fff; }
-  .ov-links { order:4; display:flex; gap:22px; margin-top:22px; }
+  .ov-links { order:4; display:flex; gap:22px; margin-top:16px; }
   .ov-links span {
     color:#9a9f9f; font-size:clamp(13px,3.8vw,16px); letter-spacing:0.15em; cursor:pointer;
     border-bottom:1px solid #3a3f3f; padding-bottom:2px;
@@ -236,7 +239,7 @@
   </div>
 </div>
 
-<div id="overlay">
+<div id="overlay"><div id="ov-inner">
   <h1>PLANET BONK</h1>
   <div class="stats" id="overlay-stats" style="display:none"></div>
   <div class="hint" id="overlay-hint" style="display:none"></div>
@@ -249,7 +252,7 @@
     <span id="help-link">HOW&nbsp;TO&nbsp;PLAY</span>
     <span id="settings-link">SETTINGS</span>
   </div>
-</div>
+</div></div>
 
 <script>
 // 오프라인 실행 (PWA)
@@ -662,11 +665,11 @@ if('serviceWorker' in navigator){
     overlayStats.innerHTML='POPPED&nbsp;&nbsp;'+popped+'&nbsp;&nbsp;·&nbsp;&nbsp;LEVEL&nbsp;&nbsp;'+level
       +'<br><br><span style="letter-spacing:0.25em">TOP&nbsp;5</span><br>'+rows;
     overlayHint.style.display='block';
-    overlayHint.textContent='A planet fell past the bottom line.';
+    overlayHint.textContent='';
     const tip=randomFact();
     if(tip){
       const dyk=document.createElement('div');
-      dyk.style.cssText='margin-top:10px;color:#9fc4ff;';
+      dyk.style.cssText='color:#9fc4ff;';
       dyk.textContent='Did you know? '+tip;
       overlayHint.appendChild(dyk);
     }
@@ -1637,6 +1640,19 @@ if('serviceWorker' in navigator){
     });
   }
   if(PBRank.enabled()) PBRank.flush().catch(()=>{});
+
+  // 화면이 작아 글이 넘치면 메뉴 전체를 살짝 줄여서 위아래가 잘리지 않게
+  const ovInner=document.getElementById('ov-inner');
+  function fitOverlay(){
+    ovInner.style.transform='';
+    const cs=getComputedStyle(overlay);
+    const avail=overlay.clientHeight-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom);
+    const h=ovInner.offsetHeight;
+    if(avail>0 && h>avail) ovInner.style.transform='scale('+(avail/h).toFixed(3)+')';
+  }
+  new ResizeObserver(fitOverlay).observe(ovInner);
+  window.addEventListener('resize', fitOverlay);
+  if(document.fonts) document.fonts.ready.then(fitOverlay);
 
   // 시작 시: 저장본 있으면 '이어하기' 메뉴 표시
   showMenu();
