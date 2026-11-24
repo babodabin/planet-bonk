@@ -1,5 +1,5 @@
 // Planet Bonk — 오프라인 캐시
-const CACHE = 'pb-v10';
+const CACHE = 'pb-v11';
 const ASSETS = [
   './',
   './index.html',

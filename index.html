@@ -142,7 +142,9 @@
   #overlay[data-mode="menu"] #back-btn,
   #overlay[data-mode="over"] #ver { display:none; }
   #ver { order:5; margin-top:14px; font-size:14px; letter-spacing:0.12em; color:#9a9f9f; }
-  #overlay button#back-btn { order:1; }
+  #overlay button#back-btn { order:1; min-height:48px; margin-top:6px; background:rgba(255,255,255,0.1); border-color:#fff; touch-action:manipulation; }
+  #overlay[data-mode="over"] #start-btn { min-height:48px; }
+  #overlay.wait { pointer-events:none; }   /* 게임 오버 직후 잘못 눌리는 것 방지 */
 
   /* 메뉴가 떠 있을 때는 아래 바의 SETTINGS·MENU를 숨김 (메뉴 안의 것과 겹치지 않게) */
   body.ov-open #menu-btn { visibility:hidden; }
@@ -339,7 +341,7 @@
   <div id="rank-line" style="display:none"></div>
   <button id="start-btn">START</button>
   <button id="resume-btn" style="display:none;">CONTINUE</button>
-  <button id="back-btn" class="secondary">MENU</button>
+  <button id="back-btn" class="secondary" type="button">BACK TO MENU</button>
   <div class="ov-row">
     <button id="guide-btn">MY PLANETS</button>
     <button id="daily-btn">DAILY</button>
@@ -348,7 +350,7 @@
   <div class="ov-links">
     <span id="settings-link">SETTINGS</span>
   </div>
-  <div id="ver">v1.7</div>
+  <div id="ver">v1.8</div>
 </div></div>
 
 <script>
@@ -922,6 +924,8 @@ if('serviceWorker' in navigator){
     resumeBtn.style.display='none';   // 끝난 게임은 이어할 수 없음
     renderGuideBtn();
     showOverlay('over');
+    // 정신없이 쏘다가 막 뜬 RETRY를 잘못 눌러 바로 다시 시작되는 것을 막음
+    overlay.classList.add('wait'); setTimeout(()=>overlay.classList.remove('wait'), 700);
     rankAfterGame(popped, level);
     sound(140, 0.5, 'sawtooth', 0.18);
     JPI.vibrate(160);
@@ -1630,7 +1634,14 @@ if('serviceWorker' in navigator){
 
   startBtn.addEventListener('click', ()=>{ clearProgress(); JPI.helpOnce('game', 'HOW TO PLAY', HELP, ()=>beginGame(true)); });
   resumeBtn.addEventListener('click', ()=>{ beginGame(false); });
-  document.getElementById('back-btn').addEventListener('click', showMenu);
+  const backBtn=document.getElementById('back-btn');
+  // 휴대폰: 손가락을 떼는 순간 바로 이동
+  backBtn.addEventListener('touchend', e=>{
+    const t=e.changedTouches[0], r=backBtn.getBoundingClientRect();
+    if(t.clientX<r.left-8 || t.clientX>r.right+8 || t.clientY<r.top-4 || t.clientY>r.bottom+12) return;
+    e.preventDefault(); showMenu();
+  });
+  backBtn.addEventListener('click', showMenu);
   const HELP_ITEM={ title:'HOW TO PLAY', lines:HELP };
   document.getElementById('settings-link').addEventListener('click', ()=>JPI.openSettings(onSettingChange, HELP_ITEM, [{ title:'BACKUP', run:()=>PBBackup.open(()=>{ PBSpace.save(); PBDaily.save(); }) }]));
   function goMenu(){
