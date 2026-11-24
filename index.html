@@ -303,7 +303,7 @@
   <div class="ov-links">
     <span id="settings-link">SETTINGS</span>
   </div>
-  <div id="ver">v1.3</div>
+  <div id="ver">v1.4</div>
 </div></div>
 
 <script>
@@ -512,9 +512,10 @@ if('serviceWorker' in navigator){
 
   // 난이도: 레벨마다 4번씩 더 (예전 5번) → 큰 행성이 더 빨리 등장
   function quotaFor(lv){ return lv*4; }
-  function maxTier(){ return Math.min(level, PLANETS.length)-1; }
+  // 처음부터 행성 4종(달·수성·화성·금성)으로 시작. 레벨마다 하나씩 늘어남
+  function maxTier(){ return Math.min(level+3, PLANETS.length)-1; }
   // 큰 행성일수록 조금 더 자주 나옴 (판이 더 빨리 참). 태양은 너무 커서 보통 확률 그대로
-  function tierWeight(t){ return t===PLANETS.length-1 ? 1 : 1 + 0.3*t; }
+  function tierWeight(t){ return t===PLANETS.length-1 ? 1 : 1 + 0.5*t; }
   function randTier(){
     const top=maxTier();
     let sum=0;
@@ -1304,9 +1305,9 @@ if('serviceWorker' in navigator){
     ctx.textAlign='center';
     ctx.shadowColor='#fff'; ctx.shadowBlur=16;
     ctx.fillText('LEVEL '+level, W/2, H*0.5);
-    if(level<=PLANETS.length){
+    if(level>1 && level+3<=PLANETS.length){
       ctx.font=Math.min(W*0.06,22)+'px "Special Elite", monospace';
-      ctx.fillText(PLANETS[level-1].name.toUpperCase()+' UNLOCKED', W/2, H*0.5+Math.min(W*0.1,38));
+      ctx.fillText(PLANETS[level+2].name.toUpperCase()+' UNLOCKED', W/2, H*0.5+Math.min(W*0.1,38));
     }
     // 레벨이 오를 때 지금 점수와 최고 점수를 잠깐 보여줌
     ctx.font='17px "Special Elite", monospace';
@@ -1440,6 +1441,7 @@ if('serviceWorker' in navigator){
   document.addEventListener('click', e=>{
     if(!running || !e.target.classList || !e.target.classList.contains('jpi-modal') || !onMenuBtn(e.clientX, e.clientY)) return;
     e.stopPropagation();
+    cardQueue.length=0;   // 아직 안 본 카드는 다음에 다시
     for(let i=0;i<20;i++){ const c=document.querySelector('.jpi-modal .jpi-close'); if(!c) break; c.click(); }
     goMenu();
   }, true);
@@ -1504,17 +1506,23 @@ if('serviceWorker' in navigator){
   }
 
   // 지금 레벨에서 나올 수 있는데 처음 보는 행성이면 카드로 소개 (카드가 떠 있는 동안 게임은 멈춤)
-  let cardQueue=[], cardOpen=false;
+  // 카드를 실제로 본 행성은 따로 기억 (카드가 뜨기 전에 앱이 닫히거나 메뉴로 나가면 다음에 다시 보여줌)
+  const SEEN_KEY='pb-seen';
+  function loadSeen(){ try{ const g=JSON.parse(localStorage.getItem(SEEN_KEY)); if(Array.isArray(g)) return g; }catch(e){} return []; }
+  function markSeen(t){ const g=loadSeen(); if(!g.includes(t)){ g.push(t); try{ localStorage.setItem(SEEN_KEY, JSON.stringify(g)); }catch(e){} } }
+  let cardQueue=[], cardOpen=false, cardNow=-1;
   function discoverAvailable(){
     for(let t=0;t<=maxTier();t++){
-      if(!isFound(t) && !cardQueue.includes(t)){ markFound(t); cardQueue.push(t); }
+      markFound(t);
+      if(t!==cardNow && !cardQueue.includes(t) && !loadSeen().includes(t)) cardQueue.push(t);
     }
     nextCard();
   }
   function nextCard(){
     if(cardOpen || !cardQueue.length) return;
     cardOpen=true;
-    showPlanetCard(cardQueue.shift(), ()=>{ cardOpen=false; nextCard(); });
+    cardNow=cardQueue.shift();
+    showPlanetCard(cardNow, ()=>{ markSeen(cardNow); cardNow=-1; cardOpen=false; nextCard(); });
   }
   function spinner(cv, tier, css){
     const draw=planetPainter(cv, tier, css, true);
@@ -1701,7 +1709,7 @@ if('serviceWorker' in navigator){
       const m=document.createElement('div'); m.className='pb-card';
       const cv=document.createElement('canvas'); cv.style.width=cv.style.height='90px'; lockedIcon(cv,90);
       const p=document.createElement('div'); p.className='pb-fact';
-      p.textContent='Reach LEVEL '+(best.t+1)+' to discover this one.';
+      p.textContent=best.t<=3 ? 'Play a game to discover this one.' : 'Reach LEVEL '+(best.t-2)+' to discover this one.';
       m.append(cv,p); JPI.modal('???', m);
     }
   });
