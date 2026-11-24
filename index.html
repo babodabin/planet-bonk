@@ -237,6 +237,27 @@
     display:flex; flex-direction:column; gap:8px; text-align:left; align-self:stretch; }
   .pb-facts p { position:relative; padding-left:14px; }
   .pb-facts p::before { content:'•'; position:absolute; left:0; color:#6c7171; }
+  /* 나의 공간 (MY SPACE) */
+  #space { position:fixed; inset:0; z-index:50; background:#04060c; display:none; }
+  #space.on { display:block; }
+  #space canvas { position:absolute; inset:0; width:100%; height:100%; display:block; }
+  .sp-top { position:absolute; left:0; right:0; top:calc(var(--top) + 8px); text-align:center; pointer-events:none; }
+  .sp-title { color:#e8eaea; font-size:clamp(24px,7vw,34px); letter-spacing:0.12em; text-shadow:0 0 14px rgba(255,255,255,0.35); }
+  .sp-sub { font-family:-apple-system,'Segoe UI',sans-serif; font-size:13px; line-height:1.6; color:#9a9f9f; margin-top:4px; }
+  .sp-bottom { position:absolute; left:0; right:0; bottom:calc(var(--sb) + 10px); display:flex; justify-content:center; gap:10px; padding:0 12px; }
+  .sp-bottom button { font-family:inherit; font-size:clamp(12px,3.4vw,15px); letter-spacing:0.08em; min-height:44px; padding:0 14px;
+    border-radius:6px; cursor:pointer; touch-action:manipulation; color:#e8eaea; background:rgba(255,255,255,0.08); border:1.5px solid rgba(255,255,255,0.6); }
+  .sp-bottom button:active { color:#000; background:#e8eaea; }
+  .sp-rows { display:flex; flex-direction:column; gap:2px; align-self:stretch; }
+  .sp-row { display:flex; justify-content:space-between; align-items:baseline; gap:10px; padding:8px; border-radius:6px;
+    font-family:-apple-system,'Segoe UI',sans-serif; font-size:14px; color:#9a9f9f; }
+  .sp-row:nth-child(odd) { background:rgba(255,255,255,0.04); }
+  .sp-row b { font-family:'Special Elite',monospace; font-weight:400; font-size:18px; color:#e8eaea; text-align:right; }
+  .sp-row b.soft { font-size:14px; color:#7a8080; }
+  .sp-grow { align-self:stretch; font-family:-apple-system,'Segoe UI',sans-serif; font-size:13px; color:#9fe0a6; text-align:center; }
+  .sp-bar { height:8px; border-radius:4px; background:#1c2222; overflow:hidden; margin-top:6px; }
+  .sp-bar i { display:block; height:100%; background:#78e68c; }
+
   .pb-back { font-family:'Special Elite',monospace; font-size:13px; letter-spacing:0.14em; color:#9a9f9f;
     background:none; border:1px solid #3a3f3f; border-radius:6px; padding:6px 16px; cursor:pointer; align-self:center; }
 </style>
@@ -261,6 +282,12 @@
   </div>
 </div>
 
+<div id="space">
+  <canvas id="space-cv"></canvas>
+  <div class="sp-top"><div class="sp-title">MY SPACE</div><div class="sp-sub" id="sp-sub"></div></div>
+  <div class="sp-bottom"><button id="sp-guide" type="button">PLANET GUIDE</button><button id="sp-back" type="button">BACK TO MENU</button></div>
+</div>
+
 <div id="overlay"><div id="ov-inner">
   <h1>PLANET BONK</h1>
   <div class="stats" id="overlay-stats" style="display:none"></div>
@@ -276,7 +303,7 @@
   <div class="ov-links">
     <span id="settings-link">SETTINGS</span>
   </div>
-  <div id="ver">v1.2</div>
+  <div id="ver">v1.3</div>
 </div></div>
 
 <script>
@@ -554,6 +581,7 @@ if('serviceWorker' in navigator){
   function saveScore(){
     try{
       localStorage.setItem('pb-record', String(record));
+      localStorage.setItem('pb-last', JSON.stringify({ s: popped, l: level }));
       const h = loadHistory();
       h.push({ s: popped, l: level, d: new Date().toISOString().slice(0,10) });
       h.sort((x,y)=>y.s-x.s);
@@ -565,6 +593,7 @@ if('serviceWorker' in navigator){
   const SAVE_KEY='pb-save';
   function saveProgress(){
     if(!running) return;
+    saveGrow();
     try{
       const data={ balls, level, popped, until, queue, ballSeq, record, fw:W, fh:H };
       localStorage.setItem(SAVE_KEY, JSON.stringify(data));
@@ -656,6 +685,31 @@ if('serviceWorker' in navigator){
   window.addEventListener('pointerup', endAim);
   window.addEventListener('pointercancel', ()=>{aiming=false;});
 
+  // ───────── 행성 키우기: 같은 행성끼리 박치기한 횟수만큼 MY SPACE의 그 행성이 자람 ─────────
+  // 큰 행성은 만나기 어려우므로 필요한 횟수를 줄임. LV1에서 시작해 LV5가 끝
+  const GROW_KEY='pb-grow', GROW_STEPS=[10,30,80,200], GROW_EASE=[1,1,0.8,0.7,0.6,0.5,0.4,0.3,0.2,0.1];
+  const GROW_MAX=GROW_STEPS.length+1;
+  let grow=(()=>{
+    let g=null; try{ g=JSON.parse(localStorage.getItem(GROW_KEY)); }catch(e){}
+    return PLANETS.map((_,i)=>Array.isArray(g) && g[i]>0 ? Math.floor(g[i]) : 0);
+  })();
+  let growDirty=false, growToast=null;
+  function growNeed(t, step){ return Math.ceil(GROW_STEPS[step]*GROW_EASE[t]); }
+  function growLevel(t){ let lv=1; for(let i=0;i<GROW_STEPS.length;i++) if(grow[t]>=growNeed(t,i)) lv=i+2; return lv; }
+  function growBonk(t){
+    const before=growLevel(t);
+    grow[t]++; growDirty=true;
+    const now=growLevel(t);
+    if(now>before){
+      growToast={ text:PLANETS[t].name.toUpperCase()+' GREW!  LV '+now, color:PLANETS[t].color, life:1 };
+      sound(740, 0.3, 'sine', 0.16);
+    }
+  }
+  function saveGrow(){
+    if(!growDirty) return;
+    try{ localStorage.setItem(GROW_KEY, JSON.stringify(grow)); growDirty=false; }catch(e){}
+  }
+
   // ───────── 규칙: 같은 행성 → 한 단계 축소, 달끼리 → 소멸 ─────────
   function shrink(b){
     popped++; until--;
@@ -712,6 +766,7 @@ if('serviceWorker' in navigator){
   // 게임 오버: 이번 점수와 세계 순위만 크게. 지난 기록(TOP 5)은 RANKING → MY BEST에서 봄
   function endGame(){
     running=false;
+    saveGrow();
     clearProgress();
     let prevBest=0; try{ prevBest=parseInt(localStorage.getItem('pb-record'))||0; }catch(e){}
     saveScore();
@@ -774,6 +829,7 @@ if('serviceWorker' in navigator){
               const col=PLANETS[a.tier].color;
               sparks((a.x+c.x)/2, (a.y+c.y)/2, col, 16, 2.6);
               sparks((a.x+c.x)/2, (a.y+c.y)/2, '#ffffff', 6, 1.8);
+              growBonk(a.tier);
               shrink(a); shrink(c);
               if(dist>0.0001){
                 const knx=dx/dist, kny=dy/dist;
@@ -1240,7 +1296,7 @@ if('serviceWorker' in navigator){
 
   function drawLevelFlash(){
     if(flashLevel<=0) return;
-    flashLevel-=0.02;
+    flashLevel-=0.012;
     ctx.save();
     ctx.globalAlpha=Math.max(0, Math.min(flashLevel,0.85));
     ctx.fillStyle='#e8eaea';
@@ -1252,6 +1308,22 @@ if('serviceWorker' in navigator){
       ctx.font=Math.min(W*0.06,22)+'px "Special Elite", monospace';
       ctx.fillText(PLANETS[level-1].name.toUpperCase()+' UNLOCKED', W/2, H*0.5+Math.min(W*0.1,38));
     }
+    // 레벨이 오를 때 지금 점수와 최고 점수를 잠깐 보여줌
+    ctx.font='17px "Special Elite", monospace';
+    ctx.fillText('SCORE '+popped+'  ·  BEST '+record, W/2, H*0.5+70);
+    ctx.restore();
+  }
+  // 행성이 자랐을 때 위쪽에 잠깐 알림
+  function drawGrowToast(){
+    if(!growToast) return;
+    growToast.life-=0.008;
+    if(growToast.life<=0){ growToast=null; return; }
+    ctx.save();
+    ctx.globalAlpha=Math.min(1, growToast.life*3);
+    ctx.font='20px "Special Elite", monospace';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillStyle=growToast.color; ctx.shadowColor=growToast.color; ctx.shadowBlur=14;
+    ctx.fillText(growToast.text, W/2, 44);
     ctx.restore();
   }
 
@@ -1277,6 +1349,7 @@ if('serviceWorker' in navigator){
         for(const b of balls) drawBall(b);
         drawParticles();
         drawLevelFlash();
+        drawGrowToast();
       }
     }
     requestAnimationFrame(loop);
@@ -1427,7 +1500,7 @@ if('serviceWorker' in navigator){
   }
   function foundCount(){ return loadGuide().filter(t=>t>=0 && t<PLANETS.length).length; }
   function renderGuideBtn(){
-    document.getElementById('guide-btn').textContent='MY PLANETS  '+foundCount()+' / '+PLANETS.length;
+    document.getElementById('guide-btn').textContent='MY SPACE  '+foundCount()+' / '+PLANETS.length;
   }
 
   // 지금 레벨에서 나올 수 있는데 처음 보는 행성이면 카드로 소개 (카드가 떠 있는 동안 게임은 멈춤)
@@ -1478,7 +1551,7 @@ if('serviceWorker' in navigator){
     const body=document.createElement('div');
     body.style.cssText='display:flex;flex-direction:column;gap:14px;';
     let stop=()=>{};
-    JPI.modal('MY PLANETS', body, ()=>stop());
+    JPI.modal('PLANET GUIDE', body, ()=>stop());
     function grid(){
       stop(); body.innerHTML='';
       const count=document.createElement('div'); count.className='pb-count';
@@ -1526,7 +1599,162 @@ if('serviceWorker' in navigator){
     c.fillStyle='#4e5454'; c.font=(r*1.1)+'px "Special Elite", monospace';
     c.textAlign='center'; c.textBaseline='middle'; c.fillText('?',0,2);
   }
-  document.getElementById('guide-btn').addEventListener('click', openGuide);
+  document.getElementById('guide-btn').addEventListener('click', openSpace);
+
+  // ───────── 나의 공간 (MY SPACE): 지구를 중심으로 모은 행성이 도는 화면 ─────────
+  const EARTH=4;
+  const spaceEl=document.getElementById('space'), spaceCv=document.getElementById('space-cv');
+  const ORBIT=[0,1,2,3,5,6,7,8,9];                       // 안쪽 궤도부터 (지구는 가운데)
+  const SPACE_R=[7,8,9.5,11.5,32,14,15,15,19,21];        // 화면에서의 크기 (LV1, 가로 400 기준)
+  const SPACE_PERIOD=[16,22,28,34,0,42,50,58,66,76];     // 한 바퀴 도는 데 걸리는 초
+  let space=null;
+  function spaceRadius(t, k){ return SPACE_R[t]*k*(1+0.12*(growLevel(t)-1)); }
+  function buildSpace(){
+    const vw=spaceEl.clientWidth, vh=spaceEl.clientHeight, d=Math.min(window.devicePixelRatio||1, 2);
+    spaceCv.width=Math.round(vw*d); spaceCv.height=Math.round(vh*d);
+    const top=document.querySelector('.sp-top').getBoundingClientRect().bottom+10;
+    const bottom=document.querySelector('.sp-bottom').getBoundingClientRect().top-14;
+    const k=Math.max(0.6, Math.min(1.4, Math.min(vw/400, (bottom-top)/560)));
+    const rx=Math.min(vw/2-34*k, 330), ry=Math.min((bottom-top)/2-34*k, rx*1.5);
+    const bg=document.createElement('canvas'); bg.width=spaceCv.width; bg.height=spaceCv.height;
+    const c=bg.getContext('2d'); c.setTransform(d,0,0,d,0,0);
+    c.fillStyle='#04060c'; c.fillRect(0,0,vw,vh);
+    const cx=vw/2, cy=(top+bottom)/2;
+    const glow=c.createRadialGradient(cx,cy,0,cx,cy,Math.max(vw,vh)*0.6);
+    glow.addColorStop(0,'rgba(40,80,160,0.22)'); glow.addColorStop(1,'rgba(0,0,0,0)');
+    c.fillStyle=glow; c.fillRect(0,0,vw,vh);
+    const rnd=seeded(21);
+    for(let i=0;i<230;i++){
+      c.fillStyle='rgba(255,255,255,'+(0.2+rnd()*0.7).toFixed(2)+')';
+      c.beginPath(); c.arc(rnd()*vw, rnd()*vh, 0.35+rnd()*1.0, 0, Math.PI*2); c.fill();
+    }
+    const list=ORBIT.map((t,i)=>{
+      const f=0.34+0.66*i/(ORBIT.length-1);
+      return { t, rx:rx*f, ry:ry*f, a0:i*2.4, found:isFound(t), r:spaceRadius(t,k), x:0, y:0 };
+    });
+    c.lineWidth=1;
+    for(const o of list){
+      c.strokeStyle=o.found ? rgba(PLANETS[o.t].color,0.32) : 'rgba(255,255,255,0.09)';
+      c.setLineDash(o.found ? [] : [3,6]);
+      c.beginPath(); c.ellipse(cx,cy,o.rx,o.ry,0,0,Math.PI*2); c.stroke();
+    }
+    const earth={ t:EARTH, found:true, r:spaceRadius(EARTH,k), x:cx, y:cy };
+    for(const o of list.concat(earth)){
+      if(!o.found) continue;
+      const css=o.r*2*(o.t===9 ? 1.75 : padOf(o.t))/0.94;
+      o.css=css; o.cv=document.createElement('canvas'); o.draw=planetPainter(o.cv, o.t, css, true);
+      o.draw(0,0);
+    }
+    return { vw, vh, d, cx, cy, bg, list, earth, n:0 };
+  }
+  let spaceRaf=0;
+  function spaceFrame(now){
+    if(!space) return;
+    spaceRaf=requestAnimationFrame(spaceFrame);
+    const s=now/1000, v=space, c=spaceCv.getContext('2d');
+    c.setTransform(1,0,0,1,0,0); c.drawImage(v.bg,0,0);
+    c.setTransform(v.d,0,0,v.d,0,0);
+    v.n++;
+    for(const o of v.list){
+      const a=o.a0+s/SPACE_PERIOD[o.t]*Math.PI*2;
+      o.x=v.cx+Math.cos(a)*o.rx; o.y=v.cy+Math.sin(a)*o.ry;
+    }
+    // 뒤(위쪽)에 있는 것부터 그려 앞뒤가 자연스럽게
+    const all=v.list.concat(v.earth).sort((p,q)=>p.y-q.y);
+    for(const o of all){
+      if(o.found){
+        if((v.n+o.t)%3===0) o.draw(s/(PERIOD[o.t]||40), s);
+        c.drawImage(o.cv, o.x-o.css/2, o.y-o.css/2, o.css, o.css);
+      }else{
+        c.fillStyle='#0d1010'; c.strokeStyle='#3a4242'; c.lineWidth=1.2;
+        c.beginPath(); c.arc(o.x,o.y,9,0,Math.PI*2); c.fill(); c.stroke();
+        c.fillStyle='#6c7171'; c.font='11px "Special Elite", monospace'; c.textAlign='center'; c.textBaseline='middle';
+        c.fillText('?', o.x, o.y+1);
+      }
+    }
+  }
+  function openSpace(){
+    if(space) return;
+    saveGrow();
+    document.getElementById('sp-sub').innerHTML=foundCount()+' / '+PLANETS.length+' COLLECTED<br>Tap Earth for your scores. Tap a planet to see it grow.<br>An imaginary space, not to scale.';
+    spaceEl.classList.add('on');
+    space=buildSpace();
+    cancelAnimationFrame(spaceRaf);
+    spaceRaf=requestAnimationFrame(spaceFrame);
+  }
+  function closeSpace(){ space=null; cancelAnimationFrame(spaceRaf); spaceEl.classList.remove('on'); renderGuideBtn(); }
+  window.addEventListener('resize', ()=>{ if(space) space=buildSpace(); });
+  document.getElementById('sp-back').addEventListener('click', closeSpace);
+  document.getElementById('sp-guide').addEventListener('click', openGuide);
+  spaceCv.addEventListener('click', e=>{
+    if(!space) return;
+    let best=null, bestD=1e9;
+    for(const o of space.list.concat(space.earth)){
+      const dist=Math.hypot(o.x-e.clientX, o.y-e.clientY)-(o.found ? o.r : 9);
+      if(dist<14 && dist<bestD){ best=o; bestD=dist; }
+    }
+    if(!best) return;
+    sound(520, 0.1, 'sine', 0.1);
+    if(best.t===EARTH) openScores();
+    else if(best.found) openPlanet(best.t);
+    else{
+      const m=document.createElement('div'); m.className='pb-card';
+      const cv=document.createElement('canvas'); cv.style.width=cv.style.height='90px'; lockedIcon(cv,90);
+      const p=document.createElement('div'); p.className='pb-fact';
+      p.textContent='Reach LEVEL '+(best.t+1)+' to discover this one.';
+      m.append(cv,p); JPI.modal('???', m);
+    }
+  });
+  function growView(t){
+    const lv=growLevel(t), el=document.createElement('div'); el.className='sp-grow';
+    if(lv>=GROW_MAX){ el.textContent='LV '+lv+' · FULLY GROWN'; return el; }
+    const need=growNeed(t,lv-1), from=lv>1 ? growNeed(t,lv-2) : 0, left=need-grow[t];
+    const text=document.createElement('div'); text.textContent='LV '+lv+' · '+left+' more '+(left===1?'bonk':'bonks')+' to grow';
+    const bar=document.createElement('div'); bar.className='sp-bar';
+    const fill=document.createElement('i'); fill.style.width=Math.max(0,Math.min(100,(grow[t]-from)/(need-from)*100))+'%';
+    bar.appendChild(fill); el.append(text, bar);
+    return el;
+  }
+  function openPlanet(t){
+    const v=detailView(t, 120);
+    const list=document.createElement('div'); list.className='pb-facts';
+    for(const f of v.f.facts){ const p=document.createElement('p'); p.textContent=f; list.appendChild(p); }
+    v.wrap.append(growView(t), list);
+    let stop=()=>{};
+    JPI.modal('LV '+growLevel(t), v.wrap, ()=>stop());
+    stop=spinner(v.cv, t, 120);
+  }
+  // 지구를 누르면: 지금 점수 · 최고 점수 · 세계 순위
+  function openScores(){
+    const wrap=document.createElement('div'); wrap.className='pb-card';
+    const rows=document.createElement('div'); rows.className='sp-rows';
+    const set=(b, text, soft)=>{ b.textContent=text; b.className=soft?'soft':''; };
+    const add=(label, value, soft)=>{
+      const r=document.createElement('div'); r.className='sp-row';
+      const n=document.createElement('span'); n.textContent=label;
+      const b=document.createElement('b'); set(b, value, soft);
+      r.append(n,b); rows.appendChild(r); return b;
+    };
+    if(PBRank.getName()) add('Player', PBRank.getName());
+    const saved=loadProgress();
+    let last=null; try{ last=JSON.parse(localStorage.getItem('pb-last')); }catch(e){}
+    if(saved) add('Current game', (saved.popped||0)+' · LEVEL '+(saved.level||1));
+    else if(last) add('Last game', last.s+' · LEVEL '+last.l);
+    else add('Last game', 'None yet', true);
+    add('My best', String(record));
+    const online=PBRank.enabled();
+    const wk=add('World rank, this week', online?'…':'Coming soon', true);
+    const al=add('World rank, all time', online?'…':'Coming soon', true);
+    if(online) for(const [which,b] of [['week',wk],['all',al]]){
+      const best=PBRank.myBest(which);
+      if(!(best>0)){ set(b,'Not ranked yet',true); continue; }
+      PBRank.rankOf(which, best).then(r=>set(b,'#'+r.rank,false)).catch(()=>set(b,'Offline',true));
+    }
+    const about=document.createElement('button'); about.className='pb-back'; about.textContent='ABOUT EARTH';
+    about.addEventListener('click', ()=>openPlanet(EARTH));
+    wrap.append(rows, growView(EARTH), about);
+    JPI.modal('MY SCORES', wrap);
+  }
 
   // ───────── 닉네임 · 전 세계 순위표 ─────────
   const rankLine=document.getElementById('rank-line');
