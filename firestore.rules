@@ -3,7 +3,7 @@ rules_version = '2';
 // - 누구나 순위표를 볼 수 있음
 // - 자기 기록(익명 로그인 아이디와 같은 문서)만 쓸 수 있음
 // - 점수는 올라갈 때만 바꿀 수 있음 (이름만 바꾸는 건 허용)
-// - 레벨에 비해 말이 안 되는 점수는 거부 (레벨 L에 닿으려면 최소 4·L·(L-1)/2점이 필요)
+// - 레벨에 비해 말이 안 되는 점수는 거부 (레벨 L에 닿으려면 최소 (L-1)·(L+2)점이 필요)
 service cloud.firestore {
   match /databases/{db}/documents {
     match /boards/{board}/scores/{uid} {
@@ -28,8 +28,8 @@ service cloud.firestore {
         && d.score is int && d.level is int
         && d.level >= 1 && d.level <= 1000
         && d.score >= 1 && d.score <= 1000000
-        && d.score * 2 >= 4 * d.level * (d.level - 1)
-        && d.score * 2 <= 4 * d.level * (d.level + 1) + 40 * d.level
+        && d.score >= (d.level - 1) * (d.level + 2)
+        && d.score <= d.level * (d.level + 3) + 20 * d.level
         && d.ts == request.time;
     }
   }

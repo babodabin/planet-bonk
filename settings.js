@@ -4,6 +4,10 @@
   function on(name){ try{ return localStorage.getItem(KEYS[name])!=='off'; }catch(e){ return true; } }
   function set(name, val){ try{ localStorage.setItem(KEYS[name], val?'on':'off'); }catch(e){} }
 
+  // 소리 크기: 기본은 작게
+  const VOLS=['low','mid','high'];
+  function volume(){ try{ const v=localStorage.getItem('pb-vol'); return VOLS.includes(v) ? v : 'low'; }catch(e){ return 'low'; } }
+
   const canVibrate = typeof navigator!=='undefined' && typeof navigator.vibrate==='function';
   function vibrate(pattern){
     if(!canVibrate || !on('vibe')) return;
@@ -93,6 +97,16 @@
       row.append(name, btn);
       list.appendChild(row);
     }
+    const vr=document.createElement('div'); vr.className='jpi-row';
+    const vn=document.createElement('span'); vn.textContent='Volume';
+    const vb=document.createElement('button'); vb.className='jpi-toggle'; vb.textContent=volume().toUpperCase();
+    vb.addEventListener('click', ()=>{
+      const v=VOLS[(VOLS.indexOf(volume())+1)%VOLS.length];
+      try{ localStorage.setItem('pb-vol', v); }catch(e){}
+      vb.textContent=v.toUpperCase();
+      if(onChange) onChange('volume', v);
+    });
+    vr.append(vn, vb); list.insertBefore(vr, list.children[2]||null);
     if(help){
       const b=document.createElement('button'); b.className='jpi-extra'; b.textContent=help.title;
       b.addEventListener('click', ()=>openHelp(help.title, help.lines));
@@ -123,5 +137,5 @@
     return true;
   }
 
-  window.JPI = { on, set, vibrate, canVibrate, isOpen, modal, openSettings, openHelp, helpOnce };
+  window.JPI = { on, set, volume, vibrate, canVibrate, isOpen, modal, openSettings, openHelp, helpOnce };
 })();
