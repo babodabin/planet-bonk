@@ -128,12 +128,13 @@
   }
   .ov-links span:active { color:#fff; }
   /* MY PLANETS · RANKING: 작게, 한 줄에 나란히 */
-  .ov-row { order:3; display:flex; gap:10px; margin-top:18px; }
+  .ov-row { order:3; display:flex; gap:8px; margin-top:18px; }
   #overlay .ov-row button {
-    font-size:clamp(12px,3.2vw,14px); letter-spacing:0.08em; padding:8px 14px;
+    font-size:clamp(12px,3.2vw,14px); letter-spacing:0.06em; padding:10px 10px;
     background:transparent; box-shadow:none; border-radius:6px;
   }
   #overlay button#guide-btn { color:#e8eaea; border:1px solid rgba(255,255,255,0.5); }
+  #overlay button#daily-btn { color:#9fe0a6; border:1px solid rgba(120,230,140,0.5); }
   #overlay button#rank-btn { color:#ffd98a; border:1px solid rgba(255,210,120,0.6); }
   /* 시작 화면(menu)과 게임 오버(over)에 보이는 것을 나눔 */
   #overlay[data-mode="over"] .ov-row,
@@ -255,6 +256,22 @@
   .sp-row b { font-family:'Special Elite',monospace; font-weight:400; font-size:18px; color:#e8eaea; text-align:right; }
   .sp-row b.soft { font-size:14px; color:#7a8080; }
   .sp-grow { align-self:stretch; font-family:-apple-system,'Segoe UI',sans-serif; font-size:13px; color:#9fe0a6; text-align:center; }
+  .dy-list { display:flex; flex-direction:column; gap:12px; }
+  .dy-row { font-family:-apple-system,'Segoe UI',sans-serif; font-size:14px; color:#d5dada; border:1px solid #2a2f2f; border-radius:8px; padding:10px; }
+  .dy-row.done { opacity:0.6; }
+  .dy-top { display:flex; justify-content:space-between; gap:10px; align-items:baseline; }
+  .dy-top b { font-family:'Special Elite',monospace; font-weight:400; color:#ffd98a; white-space:nowrap; }
+  .dy-num { font-size:12px; color:#8a9090; text-align:right; margin-top:3px; }
+  .dy-note { font-family:-apple-system,'Segoe UI',sans-serif; font-size:13px; color:#9a9f9f; text-align:center; }
+  .dy-streak { font-family:'Special Elite',monospace; font-size:14px; letter-spacing:0.12em; color:#9fe0a6; text-align:center; }
+  .bk { display:flex; flex-direction:column; gap:10px; font-family:-apple-system,'Segoe UI',sans-serif; font-size:13px; line-height:1.55; color:#c8cccc; }
+  .bk-code { width:100%; font-family:monospace; font-size:16px; line-height:1.3; color:#d5dada; background:#111; border:1px solid #4a5050; border-radius:6px; padding:8px; resize:none;
+    word-break:break-all; touch-action:pan-y; -webkit-user-select:text; user-select:text; }
+  .bk-row { display:flex; gap:8px; }
+  .bk-btn { flex:1; font-family:'Special Elite',monospace; font-size:14px; letter-spacing:0.08em; min-height:44px; border-radius:6px; cursor:pointer; color:#000; background:#e8eaea; border:1.5px solid #e8eaea; }
+  .bk-btn.line { color:#e8eaea; background:transparent; border-color:rgba(255,255,255,0.6); }
+  .bk-msg { font-size:12px; color:#ffd98a; min-height:18px; text-align:center; }
+  .sp-perk { font-size:12px; color:#9fc4ff; margin-top:4px; line-height:1.5; }
   .sp-dust { font-size:15px; letter-spacing:0.1em; color:#ffd98a; margin-top:4px; }
   .sp-name { font-size:13px; letter-spacing:0.2em; color:#8a9090; margin-top:2px; }
   .sp-fill { align-self:stretch; display:flex; flex-direction:column; gap:12px; }
@@ -324,12 +341,13 @@
   <button id="back-btn" class="secondary">MENU</button>
   <div class="ov-row">
     <button id="guide-btn">MY PLANETS</button>
+    <button id="daily-btn">DAILY</button>
     <button id="rank-btn">RANKING</button>
   </div>
   <div class="ov-links">
     <span id="settings-link">SETTINGS</span>
   </div>
-  <div id="ver">v1.5</div>
+  <div id="ver">v1.6</div>
 </div></div>
 
 <script>
@@ -355,6 +373,7 @@ if('serviceWorker' in navigator){
 <script src="settings.js"></script>
 <script src="leaderboard.js"></script>
 <script src="space.js"></script>
+<script src="progress.js"></script>
 <script>
 (function(){
   // ───────── 행성 정의 (크기 순) ─────────
@@ -621,9 +640,9 @@ if('serviceWorker' in navigator){
   const SAVE_KEY='pb-save';
   function saveProgress(){
     if(!running) return;
-    PBSpace.save();
+    PBSpace.save(); PBDaily.save();
     try{
-      const data={ balls, level, popped, until, queue, ballSeq, record, fw:W, fh:H, gd:gameDust };
+      const data={ balls, level, popped, until, queue, ballSeq, record, fw:W, fh:H, gd:gameDust, sh:shields, sg:shipsThisGame };
       localStorage.setItem(SAVE_KEY, JSON.stringify(data));
     }catch(e){}
   }
@@ -639,8 +658,8 @@ if('serviceWorker' in navigator){
   }
   function restoreGame(d){
     balls=d.balls||[]; particles=d.particles||[];
-    level=d.level||1; popped=d.popped||0; until=d.until||quotaFor(level);
-    queue=d.queue; ballSeq=d.ballSeq||0; record=d.record||record;
+    level=Number(d.level)||1; popped=Number(d.popped)||0; until=Number(d.until)||quotaFor(level);
+    queue=d.queue; ballSeq=Number(d.ballSeq)||0; record=Math.max(record, Number(d.record)||0);
     // 행성 크기 표가 바뀌었을 수 있으니 반지름은 항상 지금 기준으로 다시 맞춤
     for(const b of balls) b.r = radiusOf(b.tier);
     // 필드 크기를 고정하기 전(화면 픽셀 기준)에 저장된 게임은 새 필드 안으로 옮겨 놓음
@@ -652,13 +671,14 @@ if('serviceWorker' in navigator){
       }
     }
     pairCooldown.clear(); running=true;
-    resetEvents(); gameDust=d.gd||0;
+    resetEvents(); gameDust=d.gd||0; dailyWon=0; shipsThisGame=d.sg||0;
+    shields=typeof d.sh==='number' ? d.sh : PBSpace.shields();
     renderQueue(); updateHUD();
   }
 
   function newGame(){
     balls=[]; particles=[]; pairCooldown.clear();
-    resetEvents(); gameDust=0;
+    resetEvents(); gameDust=0; dailyWon=0; shipsThisGame=0; shields=PBSpace.shields();
     level=1; popped=0; until=quotaFor(1);
     queue=[]; refillQueue();
     running=true;
@@ -718,8 +738,17 @@ if('serviceWorker' in navigator){
 
   // ───────── 별가루: 박치기·레벨 업·우주선 잡기로 모아 MY SPACE에서 씀 (화면에는 숫자로만 보여 우주는 어둡게) ─────────
   let gameDust=0, toast=null;
-  function gain(n){ gameDust+=n; PBSpace.earn(n); }
-  function bonkDust(t){ gain(t>=7 ? 3 : t>=4 ? 2 : 1); }
+  function gain(n){ gameDust+=n; PBSpace.earn(n); daily('dust', n); }
+  // 키운 행성일수록 박치기할 때 별가루를 더 줌
+  function bonkDust(t){ daily('bonk', t); gain((t>=7 ? 3 : t>=4 ? 2 : 1)+PBSpace.bonkBonus(t)); }
+  // 매일 목표에 알림. 깬 목표가 있으면 위쪽에 잠깐 표시
+  let dailyWon=0;
+  function daily(kind, v){
+    const won=PBDaily.on(kind, v);
+    if(won){ dailyWon+=won; toast={ text:'DAILY GOAL  ✦ '+won, color:'#9fe0a6', life:1.4 }; sound(990, 0.3, 'sine', 0.16); }
+  }
+  // MY PLANET(지구)을 키우면 생기는 방어막: 행성이 아래로 빠져도 한 번 막아 줌
+  let shields=0, shipsThisGame=0;
 
   // ───────── 지나가는 우주선 · 후반 방해 요소 ─────────
   let flyer=null, hazard=null, flyerIn=6, hazardIn=5, flyersThisLevel=0;
@@ -793,13 +822,14 @@ if('serviceWorker' in navigator){
     if(z.t>=z.life) hazard=null;
   }
   function catchFlyer(){
-    const f=flyer, dustN=f.id==='halley' ? 25 : 15;
+    const f=flyer, dustN=(f.id==='halley' ? 25 : 15)+PBSpace.shipBonus(f.id);
     flyer=null;
     popped+=3; if(popped>record) record=popped;
     gain(dustN);
     toast={ text:'+3  ·  ✦ '+dustN, color:'#ffd98a', life:1 };
     sparks(f.x, f.y, '#ffd98a', 8, 1.6);
     sound(920, 0.25, 'sine', 0.16); JPI.vibrate(20);
+    shipsThisGame++; daily('ship', 1); daily('ship1', shipsThisGame);
     if(PBSpace.catchShip(f.id)) PBSpace.shipCard(f.id);
   }
 
@@ -824,7 +854,7 @@ if('serviceWorker' in navigator){
       until=quotaFor(level);
       sound(660, 0.3, 'sine', 0.18); JPI.vibrate([30,60,30]);
       flashLevel=1;
-      gain(3); flyersThisLevel=0;
+      gain(3); flyersThisLevel=0; daily('level', level);
       saveProgress();
       discoverAvailable();
     }
@@ -860,7 +890,8 @@ if('serviceWorker' in navigator){
   // 게임 오버: 이번 점수와 세계 순위만 크게. 지난 기록(TOP 5)은 RANKING → MY BEST에서 봄
   function endGame(){
     running=false;
-    PBSpace.save();
+    daily('game', 1); daily('score', popped);
+    PBSpace.save(); PBDaily.save();
     clearProgress();
     let prevBest=0; try{ prevBest=parseInt(localStorage.getItem('pb-record'))||0; }catch(e){}
     saveScore();
@@ -869,6 +900,7 @@ if('serviceWorker' in navigator){
     overlayStats.innerHTML='<div class="go-score">'+popped+'</div>'
       +'<div class="go-sub">SCORE · LEVEL '+level+'</div>'
       +(gameDust>0 ? '<div class="go-sub" style="color:#ffd98a">✦ '+gameDust+' STARDUST</div>' : '')
+      +(dailyWon>0 ? '<div class="go-sub" style="color:#9fe0a6">DAILY GOAL ✦ '+dailyWon+'</div>' : '')
       +(popped>prevBest && popped>0 ? '<div class="go-best">NEW BEST!</div>' : '<div class="go-sub">BEST '+record+'</div>');
     overlayHint.style.display='none';
     startBtn.textContent='RETRY';
@@ -902,7 +934,13 @@ if('serviceWorker' in navigator){
 
         if(!b.armed && b.y < H - BALL_R*3.2) b.armed=true;
 
-        if(b.armed && b.y - b.r >= H){
+        if(!b.dead && b.armed && b.y - b.r >= H){
+          if(shields>0){
+            shields--; b.dead=true;
+            toast={ text:shields>0 ? 'SHIELD!  '+shields+' LEFT' : 'SHIELD!  NONE LEFT', color:'#7ab8ff', life:1.2 };
+            sparks(b.x, H-4, '#7ab8ff', 14, 2.2); sound(300, 0.35, 'sine', 0.18); JPI.vibrate(50);
+            continue;
+          }
           endGame();
           return;
         }
@@ -1422,6 +1460,15 @@ if('serviceWorker' in navigator){
     ctx.fillText(toast.text, W/2, 40);
     ctx.restore();
   }
+  function drawShield(){
+    if(shields<=0) return;
+    ctx.save();
+    ctx.strokeStyle='rgba(122,184,255,0.55)'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(4,H-3); ctx.lineTo(W-4,H-3); ctx.stroke();
+    ctx.fillStyle='rgba(122,184,255,0.8)';
+    for(let i=0;i<shields;i++){ ctx.beginPath(); ctx.arc(14+i*14, H-14, 4, 0, Math.PI*2); ctx.fill(); }
+    ctx.restore();
+  }
   function drawFlyer(){
     if(!flyer) return;
     ctx.save(); ctx.translate(flyer.x, flyer.y); if(flyer.dir<0) ctx.scale(-1,1);
@@ -1475,6 +1522,7 @@ if('serviceWorker' in navigator){
       // 첫 페이지에서는 하던 게임의 행성을 그리지 않음
       if(!document.body.classList.contains('on-menu')){
         drawHazard();
+        drawShield();
         drawAim();
         for(const b of balls) drawBall(b);
         drawFlyer();
@@ -1525,6 +1573,8 @@ if('serviceWorker' in navigator){
     else { const saved=loadProgress(); if(saved) restoreGame(saved); else newGame(); }
     if(JPI.on('music')!==bgm.isOn()) bgm.toggle();
     discoverAvailable();
+    // 폰이 저장 공간을 비울 때 기록을 지우지 않도록 요청
+    try{ if(navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(()=>{}); }catch(e){}
   }
 
   // 앱을 끄거나 뒤로 가는 등 화면을 벗어날 때 즉시 저장
@@ -1541,6 +1591,8 @@ if('serviceWorker' in navigator){
     'Every time a planet shrinks, UNTIL NEXT LEVEL drops by 1. At 0 you level up and bigger planets start to appear.',
     'If a planet rolls all the way past the bottom line, the game is over.',
     'Bonk planets to earn Stardust, then spend it in MY SPACE to grow your planets.',
+    'Grown planets give more Stardust. Grow Earth to LV 4 for a shield that saves you once.',
+    'Finish the DAILY goals for extra Stardust.',
     'Hit a spacecraft flying by for +3 points and extra Stardust.',
     'Later levels bring black holes, space debris and solar flares.'
   ];
@@ -1552,7 +1604,7 @@ if('serviceWorker' in navigator){
   resumeBtn.addEventListener('click', ()=>{ beginGame(false); });
   document.getElementById('back-btn').addEventListener('click', showMenu);
   const HELP_ITEM={ title:'HOW TO PLAY', lines:HELP };
-  document.getElementById('settings-link').addEventListener('click', ()=>JPI.openSettings(onSettingChange, HELP_ITEM));
+  document.getElementById('settings-link').addEventListener('click', ()=>JPI.openSettings(onSettingChange, HELP_ITEM, [{ title:'BACKUP', run:()=>PBBackup.open(()=>{ PBSpace.save(); PBDaily.save(); }) }]));
   function goMenu(){
     if(!running) return;
     aiming=false;
@@ -1635,7 +1687,8 @@ if('serviceWorker' in navigator){
   }
   function foundCount(){ return loadGuide().filter(t=>t>=0 && t<PLANETS.length).length; }
   function renderGuideBtn(){
-    document.getElementById('guide-btn').textContent='MY SPACE  '+foundCount()+' / '+PLANETS.length;
+    document.getElementById('guide-btn').textContent='MY SPACE';
+    document.getElementById('daily-btn').textContent=PBDaily.label();
   }
 
   // 지금 레벨에서 나올 수 있는데 처음 보는 행성이면 카드로 소개 (카드가 떠 있는 동안 게임은 멈춤)
@@ -1741,6 +1794,8 @@ if('serviceWorker' in navigator){
     c.textAlign='center'; c.textBaseline='middle'; c.fillText('?',0,2);
   }
   document.getElementById('guide-btn').addEventListener('click', ()=>PBSpace.open());
+  document.getElementById('daily-btn').addEventListener('click', ()=>PBDaily.open());
+  PBDaily.init(n=>{ PBSpace.earn(n); PBSpace.save(); });
   PBSpace.init({
     PLANETS, FACTS, PERIOD, planetPainter, spinner, texture, padOf, rgba, seeded, sound, lockedIcon, isFound, openGuide, loadProgress,
     record:()=>record,

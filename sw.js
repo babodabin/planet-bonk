@@ -1,11 +1,12 @@
 // Planet Bonk — 오프라인 캐시
-const CACHE = 'pb-v8';
+const CACHE = 'pb-v9';
 const ASSETS = [
   './',
   './index.html',
   './settings.js',
   './leaderboard.js',
   './space.js',
+  './progress.js',
   './manifest.json',
   './icon-180.png',
   './icon-192.png',

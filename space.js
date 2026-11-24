@@ -86,6 +86,18 @@
     if(SHIPS[id]) return (ships[id]||0)>0;
     return !!lv[id];
   }
+  // 키운 보람
+  function bonkBonus(t){ return Math.floor((levelOf('p'+t)-1)/2); }
+  function shipBonus(id){ return (levelOf(id)-1)*5; }
+  function shieldsAt(l){ return l>=8 ? 2 : l>=4 ? 1 : 0; }
+  function perk(id){
+    if(SHIPS[id]){ const b=shipBonus(id); return 'Bonus: +'+b+' ✦ each time you hit it'+(levelOf(id)<SHIP_MAX ? '. Next: +'+(b+5) : ''); }
+    if(!/^p\d$/.test(id)) return '';
+    const t=+id[1], l=levelOf(id), cap=Math.floor((maxLv(id)-1)/2), b=bonkBonus(t);
+    let s='Bonus: +'+b+' ✦ each '+api.PLANETS[t].name+' bonk'+(b<cap ? '. Next at LV '+(b*2+3) : '');
+    if(id===EARTH){ const n=shieldsAt(l); s+='\nShields each game: '+n+(n<2 ? '. Next at LV '+(n ? 8 : 4) : ''); }
+    return s;
+  }
   function spend(n){ if(dust<n) return false; dust-=n; dirty=true; save(); return true; }
   function earn(n){ dust+=n; dirty=true; }
   function grow(id){
@@ -341,6 +353,8 @@
       box.innerHTML='';
       const l=levelOf(id), c=costOf(id);
       box.appendChild(el('div','','LV '+l+' / '+maxLv(id)));
+      const pk=perk(id);
+      if(pk){ const d=el('div','sp-perk',pk); d.style.whiteSpace='pre-line'; box.appendChild(d); }
       if(!c){ box.appendChild(el('div','sp-done','FULLY GROWN')); return; }
       const b=el('button','sp-buy','GROW  ✦ '+c); b.type='button'; b.disabled=dust<c;
       b.addEventListener('click', ()=>{ if(grow(id)){ api.sound(740,0.3,'sine',0.16); renderTop(); render(); if(onDone) onDone(); } });
@@ -486,7 +500,7 @@
 
   window.PBSpace = {
     init, open, save, earn, drawShip, shipCard, SHIP_IDS, SHIPS,
-    dust:()=>dust,
+    dust:()=>dust, bonkBonus, shipBonus, shields:()=>shieldsAt(levelOf(EARTH)),
     // 우주선을 잡음. 처음이면 true
     catchShip(id){ const first=!ships[id]; ships[id]=(ships[id]||0)+1; dirty=true; return first; }
   };

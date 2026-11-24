@@ -69,7 +69,7 @@
 
   // onChange(name, value): 화면마다 배경음악을 켜고 끄는 등 즉시 반영할 일을 처리
   // help: { title, lines } 를 주면 맨 아래에 게임 방법 버튼이 생김
-  function openSettings(onChange, help){
+  function openSettings(onChange, help, extras){
     const list=document.createElement('div'); list.className='jpi-list';
     const rows=[['music','Music'],['sfx','Sound effects'],['vibe','Vibration']];
     for(const [key,label] of rows){
@@ -96,6 +96,11 @@
     if(help){
       const b=document.createElement('button'); b.className='jpi-extra'; b.textContent=help.title;
       b.addEventListener('click', ()=>openHelp(help.title, help.lines));
+      list.appendChild(b);
+    }
+    for(const x of extras||[]){
+      const b=document.createElement('button'); b.className='jpi-extra'; b.textContent=x.title;
+      b.addEventListener('click', x.run);
       list.appendChild(b);
     }
     return modal('SETTINGS', list);
