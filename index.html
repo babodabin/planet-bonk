@@ -366,7 +366,7 @@
   <div class="ov-links">
     <span id="settings-link">SETTINGS</span>
   </div>
-  <div id="ver">v1.9</div>
+  <div id="ver">v2.0</div>
 </div></div>
 
 <script>
@@ -584,8 +584,9 @@ if('serviceWorker' in navigator){
 
   // 난이도: 레벨 1은 4번, 그다음부터 2번씩 더 → 다음 행성이 빨리 등장
   function quotaFor(lv){ return 2+lv*2; }
-  // 가장 작은 달부터 시작. 레벨마다 다음으로 큰 행성이 하나씩 늘어남
-  function maxTier(){ return Math.min(level, PLANETS.length)-1; }
+  // 가장 작은 달부터 시작. 작은 행성은 금방, 큰 행성일수록 훨씬 늦게 나옴
+  const UNLOCK=[1,2,3,5,7,9,11,13,15,18];
+  function maxTier(){ let t=0; while(t+1<UNLOCK.length && UNLOCK[t+1]<=level) t++; return t; }
   // 큰 행성일수록 조금 더 자주 나옴 (판이 더 빨리 참). 태양은 너무 커서 보통 확률 그대로
   function tierWeight(t){ return t===PLANETS.length-1 ? 1 : 1 + 0.5*t; }
   function randTier(){
@@ -673,7 +674,7 @@ if('serviceWorker' in navigator){
     if(!running) return;
     PBSpace.save(); PBDaily.save();
     try{
-      const data={ balls, level, popped, until, queue, ballSeq, record, fw:W, fh:H, gd:gameDust, sh:shields, sg:shipsThisGame };
+      const data={ balls, level, popped, until, queue, ballSeq, record, fw:W, fh:H, gd:gameDust, sh:shields, sg:shipsThisGame, jk:junk };
       localStorage.setItem(SAVE_KEY, JSON.stringify(data));
     }catch(e){}
   }
@@ -702,7 +703,7 @@ if('serviceWorker' in navigator){
       }
     }
     pairCooldown.clear(); running=true;
-    resetEvents(); gameDust=d.gd||0; dailyWon=0; shipsThisGame=d.sg||0;
+    resetEvents(); restoreJunk(d.jk); gameDust=d.gd||0; dailyWon=0; shipsThisGame=d.sg||0;
     shields=typeof d.sh==='number' ? d.sh : PBSpace.shields()+PBShip.extraShields();
     renderQueue(); updateHUD();
   }
@@ -791,42 +792,60 @@ if('serviceWorker' in navigator){
 
   // ───────── 지나가는 우주선 · 후반 방해 요소 ─────────
   let sinkLeft=0, sinkBefore=0;   // 중력: 남은 거리, 이 번호보다 먼저 쏜 행성만 내려감
-  let flyer=null, hazard=null, flyerIn=6, hazardIn=5, flyersThisLevel=0;
+  let flyer=null, flyerIn=6, flyersThisLevel=0;
+  // 방해 요소: 레벨이 오를수록 종류와 수가 늘어남
+  //  LV3 우주 쓰레기(막음) → LV5 우주돌(날아와 밀어냄) → LV7 블랙홀(끌어당겨 아래로 내던짐) → LV9 태양 폭풍
+  let junk=[], roids=[], holes=[], flare=null, junkIn=2, roidIn=2, holeIn=3, flareIn=4, warned={};
+  function junkMax(){ return level<3 ? 0 : Math.min(7, 1+Math.floor((level-2)/1.5)); }
+  function roidMax(){ return level<5 ? 0 : Math.min(4, 1+Math.floor((level-5)/3)); }
+  function holeMax(){ return level<7 ? 0 : Math.min(3, 1+Math.floor((level-7)/4)); }
   function sinkPerShot(){ return Math.min(14, 2*(level-1)); }
-  function resetEvents(){ sinkLeft=0; flyer=null; hazard=null; flyerIn=5+Math.floor(Math.random()*4); hazardIn=4; flyersThisLevel=0; toast=null; }
-  // 쏠 때마다 세어서, 가끔 우주선이 지나가고 레벨 4부터 방해 요소가 나옴
+  function resetEvents(){
+    sinkLeft=0; flyer=null; flyerIn=5+Math.floor(Math.random()*4); flyersThisLevel=0; toast=null;
+    junk=[]; roids=[]; holes=[]; flare=null; junkIn=1; roidIn=2; holeIn=2; flareIn=3; warned={};
+  }
+  // 저장했다 이어 해도 우주 쓰레기는 그대로 남음
+  function restoreJunk(list){
+    if(!Array.isArray(list)) return;
+    junk=list.slice(0,7).map(k=>({ x:Number(k&&k.x), y:Number(k&&k.y), r:Number(k&&k.r), hp:Math.min(3,Number(k&&k.hp)), a:Number(k&&k.a)||0 }))
+      .filter(k=>k.x>0 && k.x<W && k.y>0 && k.y<H && k.r>4 && k.r<20 && k.hp>0);
+  }
+  function warn(key, text, color){ if(warned[key]) return; warned[key]=true; toast={ text, color, life:1.2 }; }
+  // 쏠 때마다 세어서 우주선과 방해 요소가 나옴
   function onShot(){
     sinkLeft+=sinkPerShot(); sinkBefore=ballSeq-1;
     if(!flyer && flyersThisLevel<3 && --flyerIn<=0){ spawnFlyer(); flyerIn=6+Math.floor(Math.random()*5); }
-    if(level>=4 && !hazard && --hazardIn<=0){ spawnHazard(); hazardIn=Math.max(3, 9-level); }
+    if(junk.length<junkMax() && --junkIn<=0){ spawnJunk(); junkIn=level>=10 ? 1 : 2; }
+    if(level>=5 && --roidIn<=0){ for(let i=roids.length;i<roidMax();i++) spawnRoid(); roidIn=Math.max(2, 5-Math.floor((level-5)/3)); }
+    if(holes.length<holeMax() && --holeIn<=0){ spawnHole(); holeIn=Math.max(2, 5-Math.floor((level-7)/3)); }
+    if(level>=9 && !flare && --flareIn<=0){ flare={ t:0 }; flareIn=Math.max(4, 8-Math.floor((level-9)/2)); warn('flare','SOLAR FLARE!','#ffb45c'); sound(200,0.6,'sawtooth',0.1); }
+  }
+  function spawnJunk(){
+    for(let n=0;n<30;n++){
+      const x=30+Math.random()*(W-60), y=110+Math.random()*320, r=10+Math.random()*4;
+      if(balls.some(b=>Math.hypot(b.x-x,b.y-y)<b.r+r+8) || junk.some(k=>Math.hypot(k.x-x,k.y-y)<52)) continue;
+      junk.push({ x, y, r, hp:level>=8 ? 3 : 2, a:Math.random()*6 });
+      warn('junk','SPACE JUNK','#b8c0c6'); return;
+    }
+  }
+  function spawnRoid(){
+    const dir=Math.random()<0.5 ? 1 : -1, sp=1.3+Math.random()*0.7+Math.min(0.8,(level-5)*0.08);
+    roids.push({ x:dir>0 ? -24-Math.random()*60 : W+24+Math.random()*60, y:50+Math.random()*190, vx:dir*sp, vy:0.25+Math.random()*0.5, r:12+Math.random()*Math.min(8,level*0.5), hp:3, a:0 });
+    warn('roid','ASTEROIDS!','#d0a27a');
+  }
+  function spawnHole(){
+    for(let n=0;n<20;n++){
+      const x=W*(0.2+Math.random()*0.6), y=H*(0.2+Math.random()*0.32);
+      if(holes.some(z=>Math.hypot(z.x-x,z.y-y)<150)) continue;
+      holes.push({ x, y, t:0, life:900+Math.min(600,level*30) });
+      warn('hole','BLACK HOLE','#b79cff'); return;
+    }
   }
   function spawnFlyer(){
     const id=PBSpace.SHIP_IDS[Math.floor(Math.random()*PBSpace.SHIP_IDS.length)];
     const dir=Math.random()<0.5 ? 1 : -1, fast=id==='halley';
     flyer={ id, dir, x:dir>0?-30:W+30, y0:80+Math.random()*190, y:0, v:(fast?1.9:1.1), t:0 };
     flyer.y=flyer.y0; flyersThisLevel++;
-  }
-  function spawnHazard(){
-    const kinds=['hole']; if(level>=5) kinds.push('debris'); if(level>=6) kinds.push('flare');
-    const type=kinds[Math.floor(Math.random()*kinds.length)];
-    if(type==='hole'){
-      hazard={ type, x:W*(0.25+Math.random()*0.5), y:H*(0.22+Math.random()*0.3), life:900, t:0 };
-      toast={ text:'BLACK HOLE', color:'#b79cff', life:1 };
-    }else if(type==='debris'){
-      const rocks=[];
-      for(let n=0; n<40 && rocks.length<3; n++){
-        const x=30+Math.random()*(W-60), y=110+Math.random()*310, r=9+Math.random()*4;
-        if(balls.some(b=>Math.hypot(b.x-x,b.y-y)<b.r+r+10) || rocks.some(k=>Math.hypot(k.x-x,k.y-y)<60)) continue;
-        rocks.push({ x, y, r, hp:2, a:Math.random()*6 });
-      }
-      if(!rocks.length) return;
-      hazard={ type, rocks, life:2400, t:0 };
-      toast={ text:'SPACE DEBRIS', color:'#b8b2a8', life:1 };
-    }else{
-      hazard={ type, life:170, t:0 };
-      toast={ text:'SOLAR FLARE!', color:'#ffb45c', life:1 };
-      sound(200, 0.6, 'sawtooth', 0.1);
-    }
   }
   function eventStep(){
     if(sinkLeft>0){
@@ -838,34 +857,55 @@ if('serviceWorker' in navigator){
       if(balls.some(b=>Math.hypot(b.x-f.x,b.y-f.y)<b.r+PBShip.catchReach())) catchFlyer();
       else if(f.x<-40 || f.x>W+40) flyer=null;
     }
-    if(!hazard) return;
-    const z=hazard; z.t++;
-    if(z.type==='hole'){
-      // 움직이는 행성만 끌어당겨 길을 휘게 함 (멈춘 행성은 그대로)
+    // 우주 쓰레기: 부딪히면 튕겨 나오고, 여러 번 세게 맞히면 부서짐
+    for(const k of junk){
       for(const b of balls){
-        if(Math.hypot(b.vx,b.vy)<0.6) continue;
+        if(b.dead) continue;
+        const dx=b.x-k.x, dy=b.y-k.y, d=Math.hypot(dx,dy), m=b.r+k.r;
+        if(d>=m || d<0.0001) continue;
+        const nx=dx/d, ny=dy/d, vn=b.vx*nx+b.vy*ny;
+        b.x+=nx*(m-d); b.y+=ny*(m-d);
+        if(vn<0){ b.vx-=1.7*vn*nx; b.vy-=1.7*vn*ny; if(vn<-1){ k.hp--; sparks(k.x,k.y,'#9aa3aa',6,1.4); sound(150,0.08,'square',0.06); } }
+      }
+    }
+    if(junk.some(k=>k.hp<=0)){ const n=junk.length; junk=junk.filter(k=>k.hp>0); gain(n-junk.length); }
+    // 우주돌: 날아가며 행성을 밀어냄
+    for(const k of roids){
+      k.x+=k.vx; k.y+=k.vy; k.a+=0.03;
+      for(const b of balls){
+        if(b.dead || !b.armed) continue;
+        const dx=b.x-k.x, dy=b.y-k.y, d=Math.hypot(dx,dy), m=b.r+k.r;
+        if(d>=m || d<0.0001) continue;
+        const nx=dx/d, ny=dy/d, vn=(b.vx-k.vx)*nx+(b.vy-k.vy)*ny;
+        b.x+=nx*(m-d); b.y+=ny*(m-d);
+        if(vn<0){ b.vx-=1.5*vn*nx; b.vy-=1.5*vn*ny; if(vn<-2.5){ k.hp--; sparks(k.x,k.y,'#b98d68',6,1.6); } }
+      }
+    }
+    if(roids.length){
+      const n=roids.filter(k=>k.hp<=0).length;
+      if(n){ gain(n*2); sound(120,0.2,'square',0.08); }
+      roids=roids.filter(k=>k.hp>0 && k.x>-100 && k.x<W+100 && k.y<H-150);
+    }
+    // 블랙홀: 움직이는 행성을 끌어당기고, 가운데에 닿으면 아래로 내던짐
+    for(const z of holes){
+      z.t++;
+      const pull=0.16+Math.min(0.12,(level-7)*0.012);
+      for(const b of balls){
+        if(b.dead || !b.armed || Math.hypot(b.vx,b.vy)<0.6) continue;
         const dx=z.x-b.x, dy=z.y-b.y, d=Math.hypot(dx,dy);
-        if(d<1 || d>140) continue;
-        const a=0.04+0.16*(1-d/140);
+        if(d>140) continue;
+        if(d<16){ const a=Math.PI*(0.3+Math.random()*0.4), v=6.5/Math.sqrt(PLANETS[b.tier].size); b.vx=Math.cos(a)*v; b.vy=Math.sin(a)*v; b.x=z.x+Math.cos(a)*22; b.y=z.y+Math.sin(a)*22; sound(180,0.2,'sine',0.12); continue; }
+        const a=0.04+pull*(1-d/140);
         b.vx+=dx/d*a; b.vy+=dy/d*a;
       }
-    }else if(z.type==='debris'){
-      for(const k of z.rocks){
-        for(const b of balls){
-          const dx=b.x-k.x, dy=b.y-k.y, d=Math.hypot(dx,dy), m=b.r+k.r;
-          if(d>=m || d<0.0001) continue;
-          const nx=dx/d, ny=dy/d, vn=b.vx*nx+b.vy*ny;
-          b.x+=nx*(m-d); b.y+=ny*(m-d);
-          if(vn<0){ b.vx-=1.7*vn*nx; b.vy-=1.7*vn*ny; if(vn<-1){ k.hp--; sparks(k.x,k.y,'#8d877c',6,1.4); sound(150,0.08,'square',0.06); } }
-        }
-      }
-      z.rocks=z.rocks.filter(k=>k.hp>0);
-      if(!z.rocks.length) z.life=0;
-    }else if(z.t===120){
-      // 태양 폭풍: 모든 행성을 아래로 밀어냄 (가벼울수록 더)
-      for(const b of balls) b.vy+=2/Math.sqrt(PLANETS[b.tier].size);
     }
-    if(z.t>=z.life) hazard=null;
+    if(holes.some(z=>z.t>=z.life)) holes=holes.filter(z=>z.t<z.life);
+    // 태양 폭풍: 모든 행성을 아래로 밀어냄 (가벼울수록 더)
+    if(flare){
+      flare.t++;
+      if(flare.t===120) for(const b of balls) b.vy+=(2+Math.min(1,(level-9)*0.1))/Math.sqrt(PLANETS[b.tier].size);
+      if(flare.t>=170) flare=null;
+    }
   }
   function catchFlyer(){
     const f=flyer, dustN=(f.id==='halley' ? 25 : 15)+PBSpace.shipBonus(f.id);
@@ -1488,9 +1528,9 @@ if('serviceWorker' in navigator){
     ctx.textAlign='center';
     ctx.shadowColor='#fff'; ctx.shadowBlur=16;
     ctx.fillText('LEVEL '+level, W/2, H*0.5);
-    if(level>1 && level<=PLANETS.length){
+    if(level>1 && UNLOCK.includes(level)){
       ctx.font=Math.min(W*0.06,22)+'px "Special Elite", monospace';
-      ctx.fillText(PLANETS[level-1].name.toUpperCase()+' UNLOCKED', W/2, H*0.5+Math.min(W*0.1,38));
+      ctx.fillText(PLANETS[UNLOCK.indexOf(level)].name.toUpperCase()+' UNLOCKED', W/2, H*0.5+Math.min(W*0.1,38));
     }
     // 레벨이 오를 때 지금 점수와 최고 점수를 잠깐 보여줌
     ctx.font='17px "Special Elite", monospace';
@@ -1536,11 +1576,10 @@ if('serviceWorker' in navigator){
     PBSpace.drawShip(ctx, flyer.id, 15, animT);
     ctx.restore();
   }
+  function rockPath(r, n, seed){ ctx.beginPath(); for(let i=0;i<n;i++){ const q=r*(0.8+0.25*((i*37+seed)%5)/4), a=i/n*Math.PI*2; ctx.lineTo(Math.cos(a)*q, Math.sin(a)*q); } ctx.closePath(); }
   function drawHazard(){
-    if(!hazard) return;
-    const z=hazard, fade=Math.min(1, z.t/40, (z.life-z.t)/40);
-    ctx.save(); ctx.globalAlpha=Math.max(0,fade);
-    if(z.type==='hole'){
+    for(const z of holes){
+      ctx.save(); ctx.globalAlpha=Math.max(0, Math.min(1, z.t/40, (z.life-z.t)/40));
       const g=ctx.createRadialGradient(z.x,z.y,14,z.x,z.y,140);
       g.addColorStop(0,'rgba(120,90,200,0.28)'); g.addColorStop(1,'rgba(60,40,120,0)');
       ctx.fillStyle=g; ctx.beginPath(); ctx.arc(z.x,z.y,140,0,Math.PI*2); ctx.fill();
@@ -1548,20 +1587,34 @@ if('serviceWorker' in navigator){
       ctx.strokeStyle='rgba(183,156,255,0.6)'; ctx.lineWidth=2; ctx.setLineDash([26,12]);
       ctx.beginPath(); ctx.arc(0,0,21,0,Math.PI*2); ctx.stroke();
       ctx.setLineDash([]); ctx.fillStyle='#000'; ctx.beginPath(); ctx.arc(0,0,15,0,Math.PI*2); ctx.fill();
-    }else if(z.type==='debris'){
-      for(const k of z.rocks){
-        ctx.save(); ctx.translate(k.x,k.y); ctx.rotate(k.a+z.t*0.01);
-        ctx.fillStyle=k.hp>1 ? '#6f6a61' : '#4d4943'; ctx.strokeStyle='#969085'; ctx.lineWidth=1.2;
-        ctx.beginPath(); for(let i=0;i<7;i++){ const q=k.r*(0.8+0.25*((i*37)%5)/4), a=i/7*Math.PI*2; ctx.lineTo(Math.cos(a)*q, Math.sin(a)*q); } ctx.closePath(); ctx.fill(); ctx.stroke();
-        ctx.restore();
-      }
-    }else{
-      const push=z.t<120 ? 0.12+0.08*Math.sin(z.t*0.2) : 0.3*(1-(z.t-120)/50);
+      ctx.restore();
+    }
+    // 우주 쓰레기: 부서진 인공위성 조각
+    for(const k of junk){
+      ctx.save(); ctx.translate(k.x,k.y); ctx.rotate(k.a+animT*0.15);
+      ctx.fillStyle=k.hp>1 ? '#69737b' : '#434a50'; ctx.strokeStyle='#97a2aa'; ctx.lineWidth=1.2;
+      ctx.beginPath(); ctx.rect(-k.r*0.6,-k.r*0.55,k.r*1.2,k.r*1.1); ctx.fill(); ctx.stroke();
+      ctx.fillStyle=k.hp>1 ? '#3d5f8c' : '#2a3f5c'; ctx.fillRect(k.r*0.6,-k.r*0.35,k.r*0.45,k.r*0.7);
+      ctx.beginPath(); ctx.moveTo(-k.r*0.6,0); ctx.lineTo(-k.r*1.05,-k.r*0.45); ctx.moveTo(-k.r*0.3,-k.r*0.55); ctx.lineTo(k.r*0.2,k.r*0.5); ctx.stroke();
+      ctx.restore();
+    }
+    for(const k of roids){
+      ctx.save(); ctx.translate(k.x,k.y);
+      const m=Math.hypot(k.vx,k.vy)||1, tx=-k.vx/m*k.r*3, ty=-k.vy/m*k.r*3, g=ctx.createLinearGradient(0,0,tx,ty);
+      g.addColorStop(0,'rgba(200,140,90,0.35)'); g.addColorStop(1,'rgba(200,140,90,0)');
+      ctx.strokeStyle=g; ctx.lineWidth=k.r*1.2; ctx.lineCap='round'; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(tx,ty); ctx.stroke();
+      ctx.rotate(k.a); ctx.fillStyle=k.hp>1 ? '#7a6250' : '#55443a'; ctx.strokeStyle='#a98c74'; ctx.lineWidth=1.2;
+      rockPath(k.r, 8, 3); ctx.fill(); ctx.stroke();
+      ctx.fillStyle='rgba(0,0,0,0.25)'; ctx.beginPath(); ctx.arc(k.r*0.25,-k.r*0.2,k.r*0.22,0,Math.PI*2); ctx.arc(-k.r*0.3,k.r*0.25,k.r*0.16,0,Math.PI*2); ctx.fill();
+      ctx.restore();
+    }
+    if(flare){
+      ctx.save();
+      const push=flare.t<120 ? 0.12+0.08*Math.sin(flare.t*0.2) : 0.3*(1-(flare.t-120)/50);
       const g=ctx.createLinearGradient(0,0,0,H*0.55);
       g.addColorStop(0,'rgba(255,150,50,'+Math.max(0,push).toFixed(3)+')'); g.addColorStop(1,'rgba(255,100,0,0)');
-      ctx.fillStyle=g; ctx.fillRect(0,0,W,H*0.55);
+      ctx.fillStyle=g; ctx.fillRect(0,0,W,H*0.55); ctx.restore();
     }
-    ctx.restore();
   }
 
   // 화면 주사율과 무관하게 초당 60번만 진행 (120Hz 화면에서 2배속이 되지 않게)
@@ -1650,7 +1703,7 @@ if('serviceWorker' in navigator){
     'Size order: Moon < Mercury < Mars < Venus < Earth < Neptune < Uranus < Saturn < Jupiter < Sun',
     'Bonk two Moons together and they vanish.',
     'Bigger planets are heavier: they fly slower and are harder to push.',
-    'You start with the Moon. Every time a planet shrinks, UNTIL NEXT LEVEL drops by 1. At 0 you level up and the next bigger planet joins.',
+    'You start with the Moon. Every time a planet shrinks, UNTIL NEXT LEVEL drops by 1. At 0 you level up. Bigger planets join at later levels.',
     'From LEVEL 2, gravity pulls every planet down a little after each shot. It gets stronger every level.',
     'If a planet goes all the way past the bottom line, the game is over. A red ring means danger.',
     'Bonk planets to earn Stardust, then spend it in MY SPACE to grow your planets.',
@@ -1658,7 +1711,7 @@ if('serviceWorker' in navigator){
     'Finish the DAILY goals for extra Stardust.',
     'Upgrade your ship in MY SPACE: it changes shape, scores more and gains powers. Send it on trips for Stardust.',
     'Hit a spacecraft flying by for extra points and Stardust.',
-    'Later levels bring black holes, space debris and solar flares.'
+    'Watch out: space junk from LEVEL 3, flying asteroids from LEVEL 5, black holes from LEVEL 7 and solar flares from LEVEL 9. They grow in number every level.'
   ];
   function onSettingChange(key, val){
     if(key==='music' && bgm.isOn()!==val) bgm.toggle();
@@ -1808,7 +1861,7 @@ if('serviceWorker' in navigator){
     const v=detailView(tier, 140);
     const fact=document.createElement('div'); fact.className='pb-fact'; fact.textContent=v.f.facts[0];
     const order=document.createElement('div'); order.className='pb-order';
-    order.textContent='No. '+(tier+1)+' of '+PLANETS.length+', smallest to biggest'+(tier+1<PLANETS.length ? '\nNext: '+PLANETS[tier+1].name+' at LEVEL '+(tier+2) : '');
+    order.textContent='No. '+(tier+1)+' of '+PLANETS.length+', smallest to biggest'+(tier+1<PLANETS.length ? '\nNext: '+PLANETS[tier+1].name+' at LEVEL '+UNLOCK[tier+1] : '');
     v.wrap.append(fact, order);
     let stop=()=>{};
     JPI.modal('NEW DISCOVERY', v.wrap, ()=>{ stop(); renderGuideBtn(); if(onDone) onDone(); }, 'CONTINUE');
@@ -1825,7 +1878,7 @@ if('serviceWorker' in navigator){
       const count=document.createElement('div'); count.className='pb-count';
       count.textContent=foundCount()+' / '+PLANETS.length+' DISCOVERED';
       const note=document.createElement('div'); note.className='pb-note';
-      note.textContent='Smallest to biggest. One new planet joins each level. Not to scale.';
+      note.textContent='Smallest to biggest. Bigger planets join at later levels. Not to scale.';
       const g=document.createElement('div'); g.className='pb-grid';
       body.append(count, note, g);
       for(let t=0;t<PLANETS.length;t++){
@@ -1839,7 +1892,7 @@ if('serviceWorker' in navigator){
           cell.addEventListener('click', ()=>detail(t));
         }else{
           cell.classList.add('locked');
-          label.textContent=(t+1)+'. LEVEL '+(t+1);
+          label.textContent=(t+1)+'. LEVEL '+UNLOCK[t];
           lockedIcon(cv, 56);
         }
       }
@@ -1871,9 +1924,9 @@ if('serviceWorker' in navigator){
   document.getElementById('daily-btn').addEventListener('click', ()=>PBDaily.open());
   PBDaily.init(n=>{ PBSpace.earn(n); PBSpace.save(); });
   PBSpace.init({
-    PLANETS, FACTS, PERIOD, planetPainter, spinner, texture, padOf, rgba, seeded, sound, lockedIcon, isFound, openGuide, loadProgress,
+    PLANETS, FACTS, PERIOD, planetPainter, spinner, texture, padOf, rgba, seeded, sound, lockedIcon, isFound, markFound, openGuide, loadProgress,
     record:()=>record,
-    howToFind:t=>t===0 ? 'Play a game to discover this one.' : 'Reach LEVEL '+(t+1)+' to discover this one.',
+    howToFind:t=>t===0 ? 'Play a game to discover this one.' : 'Reach LEVEL '+UNLOCK[t]+' to discover this one.',
     onClose(){ renderGuideBtn(); renderShip(false); }
   });
 

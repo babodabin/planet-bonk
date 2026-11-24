@@ -72,6 +72,8 @@
   const EARTH = 'p4';
   const STEP = [20,40,80,150,220,300,400,500,650];
   const FIND_FAR = 60, FIND_EXO = 100;
+  // 게임에서 만나기 어려운 큰 행성은 별가루로도 찾을 수 있음 (막다른 길 방지)
+  const FIND_PLANET = [0,40,60,80,0,150,200,250,300,400];
   let api = null;
   function maxLv(id){ return id===EARTH ? 10 : SHIPS[id] ? SHIP_MAX : FAR.some(f=>f.id===id) ? 3 : 5; }
   function levelOf(id){ return Math.min(maxLv(id), Math.max(1, lv[id]||1)); }
@@ -416,13 +418,14 @@
   function openUnknown(id){
     const wrap=el('div','pb-card'), cv=document.createElement('canvas'); cv.style.width=cv.style.height='90px';
     api.lockedIcon(cv, 90); wrap.appendChild(cv);
-    const price = FAR.some(f=>f.id===id) ? FIND_FAR : EXO.some(e=>e.id===id) ? FIND_EXO : 0;
+    const planet = /^p\d$/.test(id) ? +id[1] : -1;
+    const price = planet>=0 ? FIND_PLANET[planet] : FAR.some(f=>f.id===id) ? FIND_FAR : FIND_EXO;
     let close=()=>{};
-    if(!price) wrap.appendChild(el('div','pb-fact', api.howToFind(+id[1])));
-    else{
-      wrap.appendChild(el('div','pb-fact','Something is out there, far away. Search with your telescope?'));
+    if(planet>=0) wrap.appendChild(el('div','pb-fact', api.howToFind(planet)));
+    if(price){
+      wrap.appendChild(el('div','pb-fact', planet>=0 ? 'Or search with your telescope.' : 'Something is out there, far away. Search with your telescope?'));
       const box=el('div','sp-grow'), b=el('button','sp-buy','SEARCH  ✦ '+price); b.type='button'; b.disabled=dust<price;
-      b.addEventListener('click', ()=>{ if(!spend(price)) return; lv[id]=1; store(K.lv, lv); api.sound(880,0.25,'sine',0.16); renderTop(); close(); openBody(id); });
+      b.addEventListener('click', ()=>{ if(!spend(price)) return; if(planet>=0) api.markFound(planet); lv[id]=lv[id]||1; store(K.lv, lv); api.sound(880,0.25,'sine',0.16); renderTop(); close(); openBody(id); });
       box.append(b, el('div','sp-have', dust<price ? 'You have ✦ '+dust+'. Play to collect '+(price-dust)+' more.' : 'You have ✦ '+dust));
       wrap.appendChild(box);
     }

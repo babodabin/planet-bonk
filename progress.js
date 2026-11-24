@@ -14,7 +14,7 @@
     const t=rnd(5);
     const easy=[{ k:'bonk', t, n:NEED[t] }, { k:'game', n:3 }][rnd(4)===0?1:0];
     const mid=[{ k:'dust', n:100 }, { k:'ship', n:3 }, { k:'bonk', t:(t+2)%5, n:NEED[(t+2)%5]+2 }][rnd(3)];
-    const hard=[{ k:'score', n:50+rnd(4)*10 }, { k:'level', n:7 }, { k:'ship1', n:2 }][rnd(3)];
+    const hard=[{ k:'score', n:50+rnd(4)*10 }, { k:'level', n:6 }, { k:'ship1', n:2 }][rnd(3)];
     return [easy, mid, hard];
   }
   function text(g){
