@@ -52,8 +52,10 @@
   #next-queue { display:flex; gap:7px; margin-top:4px; align-items:center; }
   .q-ball { width:32px; height:32px; display:block; }
   #right-area { text-align:right; display:flex; flex-direction:column; gap:8px; align-items:flex-end; }
-  #menu-btn, #settings-btn { cursor:pointer; }
-  #menu-btn:active, #settings-btn:active { color:#fff; }
+  /* 첫 화면으로 가는 버튼: 눌리는 버튼처럼 테두리 */
+  #menu-btn { cursor:pointer; color:#d5dada; border:1px solid rgba(255,255,255,0.45); border-radius:5px; padding:5px 10px;
+    font-size:clamp(12px,3.4vw,15px); }
+  #menu-btn:active { color:#fff; border-color:#fff; }
 
   #launcher {
     position:absolute; left:50%; top:-22px; transform:translateX(-50%);
@@ -138,7 +140,7 @@
   #overlay button#back-btn { order:1; }
 
   /* 메뉴가 떠 있을 때는 아래 바의 SETTINGS·MENU를 숨김 (메뉴 안의 것과 겹치지 않게) */
-  body.ov-open #settings-btn, body.ov-open #menu-btn { visibility:hidden; }
+  body.ov-open #menu-btn { visibility:hidden; }
   .go-score { font-size:clamp(54px,16vw,76px); line-height:1.05; color:#e8eaea; letter-spacing:0.04em;
     text-shadow:0 0 16px rgba(255,255,255,0.35); }
   .go-sub { font-size:clamp(13px,3.6vw,16px); letter-spacing:0.18em; color:#8a9090; }
@@ -247,7 +249,6 @@
     <div id="launcher"><canvas class="q-ball" id="launcher-ball"></canvas><div id="launcher-name"></div></div>
     <div id="right-area">
       <div id="record-label">RECORD&nbsp;&nbsp;0</div>
-      <div id="settings-btn">SETTINGS</div>
       <div id="menu-btn">BACK TO MENU</div>
     </div>
   </div>
@@ -268,7 +269,7 @@
   <div class="ov-links">
     <span id="settings-link">SETTINGS</span>
   </div>
-  <div id="ver">v0.9</div>
+  <div id="ver">v1.0</div>
 </div></div>
 
 <script>
@@ -326,7 +327,6 @@ if('serviceWorker' in navigator){
   const launcherBallEl = document.getElementById('launcher-ball');
   const recordLabel = document.getElementById('record-label');
   const menuBtn = document.getElementById('menu-btn');
-  const settingsBtn = document.getElementById('settings-btn');
   const overlay = document.getElementById('overlay');
   const overlayTitle = document.querySelector('#overlay h1');
   const overlayStats = document.getElementById('overlay-stats');
@@ -1331,7 +1331,6 @@ if('serviceWorker' in navigator){
   document.getElementById('back-btn').addEventListener('click', showMenu);
   const HELP_ITEM={ title:'HOW TO PLAY', lines:HELP };
   document.getElementById('settings-link').addEventListener('click', ()=>JPI.openSettings(onSettingChange, HELP_ITEM));
-  settingsBtn.addEventListener('click', ()=>{ aiming=false; JPI.openSettings(onSettingChange, HELP_ITEM); });
   menuBtn.addEventListener('click', ()=>{
     aiming=false;
     saveProgress();   // 진행 상태를 저장한 뒤 시작 화면으로 (CONTINUE로 이어하기)
