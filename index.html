@@ -366,7 +366,7 @@
   <div class="ov-links">
     <span id="settings-link">SETTINGS</span>
   </div>
-  <div id="ver">v2.0</div>
+  <div id="ver">v2.1</div>
 </div></div>
 
 <script>
@@ -419,6 +419,7 @@ if('serviceWorker' in navigator){
   const EDGE = 2.4;            // 테두리 선 두께 보정(시각적으로 표면이 맞닿게)
   const RESTITUTION = 1.0;
   const WALL_BOUNCE = 0.95;
+  const TOP_BOUNCE = 0.6;      // 위쪽 벽: 세게 쏴도 튕겨 나와 바로 지지 않게
   const MAX_POWER = 13;
   const POP_RANGE = 1.05;      // 원조: 거의 딱 붙어야(직접 맞혀야) 반응
   const POP_TICK = 8;
@@ -582,8 +583,10 @@ if('serviceWorker' in navigator){
   let bgCache=null;
   resize();
 
-  // 난이도: 레벨 1은 4번, 그다음부터 2번씩 더 → 다음 행성이 빨리 등장
-  function quotaFor(lv){ return 2+lv*2; }
+  // 난이도: 레벨 1은 6번, 그다음부터 2번씩 더
+  function quotaFor(lv){ return 4+lv*2; }
+  // 중력: 움직이는 행성이 아래로 휘어 떨어짐. 레벨이 오를수록 세짐 (무거운 행성은 덜 휘게 해서 쏠 수는 있게)
+  function pullOf(tier){ return Math.min(0.03, 0.018+0.0012*(level-1))/Math.sqrt(PLANETS[tier].size); }
   // 가장 작은 달부터 시작. 작은 행성은 금방, 큰 행성일수록 훨씬 늦게 나옴
   const UNLOCK=[1,2,3,5,7,9,11,13,15,18];
   function maxTier(){ let t=0; while(t+1<UNLOCK.length && UNLOCK[t+1]<=level) t++; return t; }
@@ -730,6 +733,7 @@ if('serviceWorker' in navigator){
     // 무게 반영: 같은 힘이라도 무거운 행성은 느리게 출발 (달은 쌩, 태양은 묵직하게)
     const heavy = 1/Math.pow(PLANETS[tier].size, 0.85);
     const v = Math.min(power, MAX_POWER) * PBShip.shotPower() * heavy;
+    const firedBall=ballSeq;
     balls.push({
       id: ballSeq++,
       x: lp.x, y: lp.y - r,
@@ -739,7 +743,7 @@ if('serviceWorker' in navigator){
     });
     queue.shift();
     refillQueue();
-    onShot();
+    onShot(firedBall);
     renderShip(true); launcherShip.classList.add('kick');
     setTimeout(()=>{ renderShip(false); launcherShip.classList.remove('kick'); }, 220);
     sound(220, 0.1, 'triangle', 0.12);
@@ -791,6 +795,7 @@ if('serviceWorker' in navigator){
   let shields=0, shipsThisGame=0;
 
   // ───────── 지나가는 우주선 · 후반 방해 요소 ─────────
+  let dropIn=3;                   // 몇 번 더 쏘면 위에서 행성이 하나 떨어지는지
   let sinkLeft=0, sinkBefore=0;   // 중력: 남은 거리, 이 번호보다 먼저 쏜 행성만 내려감
   let flyer=null, flyerIn=6, flyersThisLevel=0;
   // 방해 요소: 레벨이 오를수록 종류와 수가 늘어남
@@ -799,9 +804,9 @@ if('serviceWorker' in navigator){
   function junkMax(){ return level<3 ? 0 : Math.min(7, 1+Math.floor((level-2)/1.5)); }
   function roidMax(){ return level<5 ? 0 : Math.min(4, 1+Math.floor((level-5)/3)); }
   function holeMax(){ return level<7 ? 0 : Math.min(3, 1+Math.floor((level-7)/4)); }
-  function sinkPerShot(){ return Math.min(14, 2*(level-1)); }
+  function sinkPerShot(){ return Math.min(20, 4+2*(level-1)); }
   function resetEvents(){
-    sinkLeft=0; flyer=null; flyerIn=5+Math.floor(Math.random()*4); flyersThisLevel=0; toast=null;
+    sinkLeft=0; dropIn=3; flyer=null; flyerIn=5+Math.floor(Math.random()*4); flyersThisLevel=0; toast=null;
     junk=[]; roids=[]; holes=[]; flare=null; junkIn=1; roidIn=2; holeIn=2; flareIn=3; warned={};
   }
   // 저장했다 이어 해도 우주 쓰레기는 그대로 남음
@@ -812,8 +817,20 @@ if('serviceWorker' in navigator){
   }
   function warn(key, text, color){ if(warned[key]) return; warned[key]=true; toast={ text, color, life:1.2 }; }
   // 쏠 때마다 세어서 우주선과 방해 요소가 나옴
-  function onShot(){
-    sinkLeft+=sinkPerShot(); sinkBefore=ballSeq-1;
+  // 위에서 새 행성이 하나 떨어짐 (지금 레벨에 나오는 종류)
+  function dropOne(){
+    const t=randTier(), r=radiusOf(t);
+    for(let n=0;n<20;n++){
+      const x=r+Math.random()*(W-2*r), y=r+4;
+      if(balls.some(b=>Math.hypot(b.x-x,b.y-y)<b.r+r+2)) continue;
+      balls.push({ id:ballSeq++, x, y, vx:0, vy:2, tier:t, r, armed:true, dead:false });
+      sparks(x, y, PLANETS[t].color, 8, 1.4); warn('drop','INCOMING PLANET','#9fc4ff'); sound(300,0.15,'sine',0.1);
+      return;
+    }
+  }
+  function onShot(firedId){
+    if(--dropIn<=0){ dropOne(); dropIn=Math.max(2, 4-Math.floor((level-1)/3)); }
+    sinkLeft+=sinkPerShot(); sinkBefore=firedId;
     if(!flyer && flyersThisLevel<3 && --flyerIn<=0){ spawnFlyer(); flyerIn=6+Math.floor(Math.random()*5); }
     if(junk.length<junkMax() && --junkIn<=0){ spawnJunk(); junkIn=level>=10 ? 1 : 2; }
     if(level>=5 && --roidIn<=0){ for(let i=roids.length;i<roidMax();i++) spawnRoid(); roidIn=Math.max(2, 5-Math.floor((level-5)/3)); }
@@ -1019,11 +1036,11 @@ if('serviceWorker' in navigator){
 
         if(b.x<b.r){ b.x=b.r; b.vx=Math.abs(b.vx)*WALL_BOUNCE; }
         if(b.x>W-b.r){ b.x=W-b.r; b.vx=-Math.abs(b.vx)*WALL_BOUNCE; }
-        if(b.y<b.r){ b.y=b.r; b.vy=Math.abs(b.vy)*WALL_BOUNCE; }
+        if(b.y<b.r){ b.y=b.r; b.vy=Math.abs(b.vy)*TOP_BOUNCE; }
 
-        if(!b.armed && b.y < H - BALL_R*3.2) b.armed=true;
+        if(!b.armed && (b.y < H - BALL_R*3.2 || (b.vx===0 && b.vy===0))) b.armed=true;
 
-        if(!b.dead && b.armed && b.y - b.r >= H){
+        if(!b.dead && b.y - b.r >= H){
           if(shields>0){
             shields--; b.dead=true;
             toast={ text:shields>0 ? 'SHIELD!  '+shields+' LEFT' : 'SHIELD!  NONE LEFT', color:'#7ab8ff', life:1.2 };
@@ -1108,6 +1125,7 @@ if('serviceWorker' in navigator){
     const SPEED_CAP = MAX_POWER * 2;   // 가벼운 행성 발사 속도는 통과, 연쇄 과속만 차단
     for(const b of balls){
       let sp = Math.hypot(b.vx,b.vy);
+      if(b.armed && sp>0.3){ b.vy+=pullOf(b.tier); sp=Math.hypot(b.vx,b.vy); }
       if(sp>SPEED_CAP){ b.vx=b.vx/sp*SPEED_CAP; b.vy=b.vy/sp*SPEED_CAP; sp=SPEED_CAP; }
       if(sp>0){
         const ns = Math.max(0, sp*FRICTION_KEEP - FRICTION_SUB);
@@ -1489,9 +1507,11 @@ if('serviceWorker' in navigator){
     const dx=aimX-lp.x, dy=aimY-lp.y;
     const mag=Math.hypot(dx,dy);
     if(mag<1) return;
-    const ext=Math.max(W,H)*2;
+    const ext=Math.min(mag, 130);   // 짧은 조준선: 어디로 갈지는 감으로
     ctx.save();
-    ctx.strokeStyle='rgba(255,255,255,0.75)';
+    const fade=ctx.createLinearGradient(lp.x, lp.y, lp.x+dx/mag*ext, lp.y+dy/mag*ext);
+    fade.addColorStop(0,'rgba(255,255,255,0.8)'); fade.addColorStop(1,'rgba(255,255,255,0.05)');
+    ctx.strokeStyle=fade;
     ctx.lineWidth=2;
     ctx.shadowColor='rgba(255,255,255,0.8)';
     ctx.shadowBlur=6;
@@ -1704,7 +1724,8 @@ if('serviceWorker' in navigator){
     'Bonk two Moons together and they vanish.',
     'Bigger planets are heavier: they fly slower and are harder to push.',
     'You start with the Moon. Every time a planet shrinks, UNTIL NEXT LEVEL drops by 1. At 0 you level up. Bigger planets join at later levels.',
-    'From LEVEL 2, gravity pulls every planet down a little after each shot. It gets stronger every level.',
+    'Gravity bends your shots down and pulls every planet lower after each shot. It gets stronger every level.',
+    'New planets also drop in from the top every few shots.',
     'If a planet goes all the way past the bottom line, the game is over. A red ring means danger.',
     'Bonk planets to earn Stardust, then spend it in MY SPACE to grow your planets.',
     'Grown planets give more Stardust. Grow Earth to LV 4 for a shield that saves you once.',
