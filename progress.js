@@ -93,6 +93,7 @@
     'pb-lv':v=>map(v,x=>isInt(x,10)), 'pb-skin':v=>map(v,x=>isInt(x,2)), 'pb-ships':v=>map(v,x=>isInt(x,1e6)),
     'pb-last':v=>v && isInt(v.s,1e6) && isInt(v.l,1000),
     'pb-history':v=>Array.isArray(v) && v.length<=5 && v.every(g=>g && isInt(g.s,1e6) && isInt(g.l,1000) && /^\d{4}-\d\d-\d\d$/.test(g.d)),
+    'pb-ship':v=>PBShip.valid(v),
     'pb-daily':v=>v && /^\d{4}-\d\d-\d\d$/.test(v.day) && /^(\d{4}-\d\d-\d\d)?$/.test(v.last||'') && isInt(v.streak,100000) && Array.isArray(v.p) && v.p.length===3 && v.p.every(x=>isInt(x,1e6)) && Array.isArray(v.done) && v.done.length===3,
     'pb-save':v=>v && Array.isArray(v.balls) && v.balls.length<=200 && v.balls.every(b=>b && isInt(b.tier,9) && coord(b.x) && coord(b.y) && coord(b.vx) && coord(b.vy) && isInt(b.id,1e9))
       && Array.isArray(v.queue) && v.queue.length===4 && v.queue.every(t=>isInt(t,9)) && isInt(v.level,1000) && v.level>=1 && isInt(v.popped,1e6)

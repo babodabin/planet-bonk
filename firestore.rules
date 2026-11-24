@@ -29,7 +29,7 @@ service cloud.firestore {
         && d.level >= 1 && d.level <= 1000
         && d.score >= 1 && d.score <= 1000000
         && d.score >= (d.level - 1) * (d.level + 2)
-        && d.score <= d.level * (d.level + 3) + 20 * d.level
+        && d.score <= 4 * d.level * (d.level + 3) + 20 * d.level
         && d.ts == request.time;
     }
   }

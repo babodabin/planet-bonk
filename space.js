@@ -255,8 +255,24 @@
       else unknown(c, x, y, 6);
       hits.push({ kind:'body', id:b.id, x, y, r:Math.max(r,8) });
     }
+    // 내 우주선: 평소에는 지구 옆을 돌고, 탐험 중에는 목적지까지 갔다가 돌아옴
+    {
+      const er=radius(R0[4], EARTH, v.k), a=s*0.35, size=13*v.k*(1+0.05*(PBShip.level()-1));
+      const home=q=>[v.cx+Math.cos(q)*(er+22*v.k), v.cy+Math.sin(q)*(er*0.55+14*v.k)];
+      let [x,y]=home(a), [nx,ny]=home(a+0.05);
+      const to=PBShip.tripTo(), hit=to && (all.find(o=>o.id===to) || hits.find(h=>h.id===to)), pr=PBShip.progress();
+      if(hit && !PBShip.ready()){
+        const k=1-Math.abs(pr*2-1), hx=x, hy=y, dir=pr<0.5 ? 1 : -1;
+        nx=(hit.x-hx)*dir; ny=(hit.y-hy)*dir; x=hx+(hit.x-hx)*k; y=hy+(hit.y-hy)*k; nx+=x; ny+=y;
+      }
+      all.push({ id:'myship', ok:true, x, y, r:size, paint(){
+        c.save(); c.translate(x,y); if(!PBShip.upright()) c.rotate(Math.atan2(ny-y,nx-x)+Math.PI/2); PBShip.draw(c, size, s, false); c.restore();
+        if(PBShip.ready()){ c.fillStyle='#ffd98a'; c.font='18px "Special Elite", monospace'; c.textAlign='center'; c.textBaseline='middle'; c.fillText('!', x, y-size-9); }
+      } });
+    }
     all.sort((p,q)=>p.y-q.y);
     for(const o of all){
+      if(o.paint){ o.paint(); hits.push({ kind:'myship', id:'myship', x:o.x, y:o.y, r:Math.max(o.r,14) }); continue; }
       if(o.ok) drawBody(c, o, s, v.n); else unknown(c, o.x, o.y, 8.5);
       hits.push({ kind:'body', id:o.id, x:o.x, y:o.y, r:o.ok ? o.r : 9 });
     }
@@ -330,7 +346,7 @@
     $('sp-name').textContent=WORLDS[page].name;
     $('sp-dust').textContent='✦ '+dust+' STARDUST';
     const st=worldState(page), hint=$('sp-hint'), lock=$('sp-lock');
-    hint.textContent = page===0 ? 'Tap anything to grow it. Swipe to see other worlds.' : WORLDS[page].about;
+    hint.textContent = page===0 ? 'Tap your planets and ship. Swipe to see other worlds.' : WORLDS[page].about;
     lock.style.display = st.open ? 'none' : 'block';
     if(!st.open){
       lock.innerHTML='<b>LOCKED</b><span></span>'+(st.of ? '<div class="sp-bar"><i></i></div><em></em>' : '');
@@ -463,7 +479,8 @@
     for(const h of view.hits){ const q=Math.hypot(h.x-x,h.y-y)-h.r; if(q<12 && q<bestD){ best=h; bestD=q; } }
     if(!best) return;
     api.sound(520,0.1,'sine',0.1);
-    if(best.kind==='ship') openShip(best.id);
+    if(best.kind==='myship') PBShip.panel();
+    else if(best.kind==='ship') openShip(best.id);
     else if(best.id===EARTH) openEarth();
     else if(found(best.id)) openBody(best.id);
     else openUnknown(best.id);
@@ -483,6 +500,7 @@
 
   function init(a){
     api=a;
+    PBShip.init({ sound:a.sound, dust:()=>dust, spend, found, earn(n){ earn(n); save(); }, changed:()=>{ if(view) renderTop(); } });
     $('sp-back').addEventListener('click', close);
     $('sp-guide').addEventListener('click', ()=>api.openGuide());
     window.addEventListener('resize', ()=>{ if(view) build(); });

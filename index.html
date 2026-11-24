@@ -70,8 +70,11 @@
     background:#000;
   }
   #launcher .q-ball { width:38px; height:38px; }
+  /* 내 우주선: 발사대 바로 아래에서 행성을 쏨 */
+  #launcher-ship { position:absolute; top:43px; left:50%; width:34px; height:34px; margin-left:-17px; pointer-events:none; transition:transform .12s; }
+  #launcher-ship.kick { transform:translateY(3px); }
   #launcher-name {
-    position:absolute; top:47px; left:50%; transform:translateX(-50%);
+    position:absolute; top:76px; left:50%; transform:translateX(-50%);
     font-family:-apple-system,'Apple SD Gothic Neo',sans-serif;
     font-size:13px; letter-spacing:0.08em; white-space:nowrap;
     text-shadow:0 0 6px currentColor;
@@ -259,6 +262,19 @@
   .sp-row b { font-family:'Special Elite',monospace; font-weight:400; font-size:18px; color:#e8eaea; text-align:right; }
   .sp-row b.soft { font-size:14px; color:#7a8080; }
   .sp-grow { align-self:stretch; font-family:-apple-system,'Segoe UI',sans-serif; font-size:13px; color:#9fe0a6; text-align:center; }
+  .ms-list { display:flex; flex-direction:column; gap:6px; text-align:left; }
+  .ms-row { display:flex; align-items:center; gap:10px; padding:6px 8px; border:1px solid #2a2f2f; border-radius:8px; }
+  .ms-row.on { border-color:#ffd98a; } .ms-row.off { opacity:0.5; }
+  .ms-row canvas { flex:none; }
+  .pb-card .ms-row canvas { width:44px; height:44px; }
+  .ms-tx { display:flex; flex-direction:column; gap:2px; font-family:-apple-system,'Segoe UI',sans-serif; font-size:12px; line-height:1.4; color:#9a9f9f; }
+  .ms-tx b { font-family:'Special Elite',monospace; font-weight:400; font-size:13px; letter-spacing:0.06em; color:#e8eaea; }
+  .ms-trips { display:flex; flex-direction:column; gap:8px; align-items:stretch; text-align:center; border-top:1px solid #2a2f2f; padding-top:12px; }
+  .ms-trips .sp-buy { align-self:center; }
+  .ms-trip { display:flex; justify-content:space-between; align-items:center; min-height:44px; padding:0 12px; border-radius:8px; cursor:pointer; color:#d5dada; background:rgba(255,255,255,0.04); border:1px solid #3a3f3f;
+    font-family:-apple-system,'Segoe UI',sans-serif; font-size:14px; }
+  .ms-trip b { font-family:'Special Elite',monospace; font-weight:400; color:#ffd98a; }
+  .ms-trip:disabled { color:#5e6666; cursor:default; } .ms-trip:disabled b { color:#5e6666; }
   .dy-list { display:flex; flex-direction:column; gap:12px; }
   .dy-row { font-family:-apple-system,'Segoe UI',sans-serif; font-size:14px; color:#d5dada; border:1px solid #2a2f2f; border-radius:8px; padding:10px; }
   .dy-row.done { opacity:0.6; }
@@ -318,7 +334,7 @@
       <div>NEXT</div>
       <div id="next-queue"></div>
     </div>
-    <div id="launcher"><canvas class="q-ball" id="launcher-ball"></canvas><div id="launcher-name"></div></div>
+    <div id="launcher"><canvas class="q-ball" id="launcher-ball"></canvas><canvas id="launcher-ship"></canvas><div id="launcher-name"></div></div>
     <div id="right-area">
       <div id="record-label">RECORD&nbsp;&nbsp;0</div>
       <button id="menu-btn" type="button">BACK TO MENU</button>
@@ -350,7 +366,7 @@
   <div class="ov-links">
     <span id="settings-link">SETTINGS</span>
   </div>
-  <div id="ver">v1.8</div>
+  <div id="ver">v1.9</div>
 </div></div>
 
 <script>
@@ -375,6 +391,7 @@ if('serviceWorker' in navigator){
 </script>
 <script src="settings.js"></script>
 <script src="leaderboard.js"></script>
+<script src="ship.js"></script>
 <script src="space.js"></script>
 <script src="progress.js"></script>
 <script>
@@ -607,7 +624,12 @@ if('serviceWorker' in navigator){
     };
   }
   function paintQueuePlanet(cv, tier){ planetPainter(cv, tier)(0, 0); }
+  const launcherShip=document.getElementById('launcher-ship');
+  function renderShip(boost){
+    PBShip.paintLauncher(launcherShip, performance.now()/1000, boost);
+  }
   function renderQueue(){
+    renderShip(false);
     paintQueuePlanet(launcherBallEl, queue[0]);
     const ln=document.getElementById('launcher-name');
     ln.textContent=PLANETS[queue[0]].name;
@@ -681,13 +703,13 @@ if('serviceWorker' in navigator){
     }
     pairCooldown.clear(); running=true;
     resetEvents(); gameDust=d.gd||0; dailyWon=0; shipsThisGame=d.sg||0;
-    shields=typeof d.sh==='number' ? d.sh : PBSpace.shields();
+    shields=typeof d.sh==='number' ? d.sh : PBSpace.shields()+PBShip.extraShields();
     renderQueue(); updateHUD();
   }
 
   function newGame(){
     balls=[]; particles=[]; pairCooldown.clear();
-    resetEvents(); gameDust=0; dailyWon=0; shipsThisGame=0; shields=PBSpace.shields();
+    resetEvents(); gameDust=0; dailyWon=0; shipsThisGame=0; shields=PBSpace.shields()+PBShip.extraShields();
     level=1; popped=0; until=quotaFor(1);
     queue=[]; refillQueue();
     running=true;
@@ -706,7 +728,7 @@ if('serviceWorker' in navigator){
     const r=radiusOf(tier);
     // 무게 반영: 같은 힘이라도 무거운 행성은 느리게 출발 (달은 쌩, 태양은 묵직하게)
     const heavy = 1/Math.pow(PLANETS[tier].size, 0.85);
-    const v = Math.min(power, MAX_POWER) * heavy;
+    const v = Math.min(power, MAX_POWER) * PBShip.shotPower() * heavy;
     balls.push({
       id: ballSeq++,
       x: lp.x, y: lp.y - r,
@@ -717,6 +739,8 @@ if('serviceWorker' in navigator){
     queue.shift();
     refillQueue();
     onShot();
+    renderShip(true); launcherShip.classList.add('kick');
+    setTimeout(()=>{ renderShip(false); launcherShip.classList.remove('kick'); }, 220);
     sound(220, 0.1, 'triangle', 0.12);
     saveProgress();
   }
@@ -744,6 +768,12 @@ if('serviceWorker' in navigator){
   }
   window.addEventListener('pointerup', endAim);
   window.addEventListener('pointercancel', ()=>{aiming=false;});
+  // 비행접시 능력: 발사대를 누르면 다음 행성과 바꿈
+  document.getElementById('launcher').addEventListener('click', ()=>{
+    if(!running || JPI.isOpen() || !PBShip.canSwap()) return;
+    [queue[0],queue[1]]=[queue[1],queue[0]];
+    renderQueue(); sound(480, 0.1, 'sine', 0.12); saveProgress();
+  });
 
   // ───────── 별가루: 박치기·레벨 업·우주선 잡기로 모아 MY SPACE에서 씀 (화면에는 숫자로만 보여 우주는 어둡게) ─────────
   let gameDust=0, toast=null;
@@ -805,7 +835,7 @@ if('serviceWorker' in navigator){
     }
     if(flyer){
       const f=flyer; f.t++; f.x+=f.dir*f.v; f.y=f.y0+Math.sin(f.t*0.02)*8;
-      if(balls.some(b=>Math.hypot(b.x-f.x,b.y-f.y)<b.r+15)) catchFlyer();
+      if(balls.some(b=>Math.hypot(b.x-f.x,b.y-f.y)<b.r+PBShip.catchReach())) catchFlyer();
       else if(f.x<-40 || f.x>W+40) flyer=null;
     }
     if(!hazard) return;
@@ -840,9 +870,10 @@ if('serviceWorker' in navigator){
   function catchFlyer(){
     const f=flyer, dustN=(f.id==='halley' ? 25 : 15)+PBSpace.shipBonus(f.id);
     flyer=null;
-    popped+=3; if(popped>record) record=popped;
+    const pts=PBShip.catchPoints();
+    popped+=pts; if(popped>record) record=popped;
     gain(dustN);
-    toast={ text:'+3  ·  ✦ '+dustN, color:'#ffd98a', life:1 };
+    toast={ text:'+'+pts+'  ·  ✦ '+dustN, color:'#ffd98a', life:1 };
     sparks(f.x, f.y, '#ffd98a', 8, 1.6);
     sound(920, 0.25, 'sine', 0.16); JPI.vibrate(20);
     shipsThisGame++; daily('ship', 1); daily('ship1', shipsThisGame);
@@ -982,6 +1013,7 @@ if('serviceWorker' in navigator){
               sparks((a.x+c.x)/2, (a.y+c.y)/2, col, 16, 2.6);
               sparks((a.x+c.x)/2, (a.y+c.y)/2, '#ffffff', 6, 1.8);
               bonkDust(a.tier);
+              popped+=PBShip.bonkScore();   // 우주선 단계마다 박치기 덤 점수
               shrink(a); shrink(c);
               if(dist>0.0001){
                 const knx=dx/dist, kny=dy/dist;
@@ -1082,7 +1114,7 @@ if('serviceWorker' in navigator){
     const valueSize=Math.min(W*0.17, 80);
     const blocks=[
       ['LEVEL', level, H*0.17],
-      ['POPPED', popped, H*0.5],
+      ['SCORE', popped, H*0.5],
       ['UNTIL NEXT LEVEL', until, H*0.83]
     ];
     for(const [label, value, cy] of blocks){
@@ -1624,7 +1656,8 @@ if('serviceWorker' in navigator){
     'Bonk planets to earn Stardust, then spend it in MY SPACE to grow your planets.',
     'Grown planets give more Stardust. Grow Earth to LV 4 for a shield that saves you once.',
     'Finish the DAILY goals for extra Stardust.',
-    'Hit a spacecraft flying by for +3 points and extra Stardust.',
+    'Upgrade your ship in MY SPACE: it changes shape, scores more and gains powers. Send it on trips for Stardust.',
+    'Hit a spacecraft flying by for extra points and Stardust.',
     'Later levels bring black holes, space debris and solar flares.'
   ];
   function onSettingChange(key, val){
@@ -1726,7 +1759,7 @@ if('serviceWorker' in navigator){
   }
   function foundCount(){ return loadGuide().filter(t=>t>=0 && t<PLANETS.length).length; }
   function renderGuideBtn(){
-    document.getElementById('guide-btn').textContent='MY SPACE';
+    document.getElementById('guide-btn').textContent=PBShip.ready() ? 'MY SPACE !' : 'MY SPACE';
     document.getElementById('daily-btn').textContent=PBDaily.label();
   }
 
@@ -1841,7 +1874,7 @@ if('serviceWorker' in navigator){
     PLANETS, FACTS, PERIOD, planetPainter, spinner, texture, padOf, rgba, seeded, sound, lockedIcon, isFound, openGuide, loadProgress,
     record:()=>record,
     howToFind:t=>t===0 ? 'Play a game to discover this one.' : 'Reach LEVEL '+(t+1)+' to discover this one.',
-    onClose:renderGuideBtn
+    onClose(){ renderGuideBtn(); renderShip(false); }
   });
 
   // ───────── 닉네임 · 전 세계 순위표 ─────────
