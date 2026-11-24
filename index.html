@@ -46,7 +46,7 @@
   #bottom-bar {
     height:82px; position:relative;
     display:flex; align-items:flex-start; justify-content:space-between;
-    padding:14px 16px 0 16px;
+    padding:10px 16px 0 16px;
     color:#9a9f9f;
     font-size:clamp(14px, 4vw, 18px);
     letter-spacing:0.12em;
@@ -54,11 +54,12 @@
   #next-area { display:flex; flex-direction:column; gap:6px; }
   #next-queue { display:flex; gap:7px; margin-top:4px; align-items:center; }
   .q-ball { width:32px; height:32px; display:block; }
-  #right-area { text-align:right; display:flex; flex-direction:column; gap:8px; align-items:flex-end; }
+  #right-area { text-align:right; display:flex; flex-direction:column; gap:6px; align-items:flex-end; }
   /* 첫 화면으로 가는 버튼: 눌리는 버튼처럼 테두리 */
-  #menu-btn { cursor:pointer; color:#d5dada; border:1px solid rgba(255,255,255,0.45); border-radius:5px; padding:5px 10px;
-    font-size:clamp(12px,3.4vw,15px); }
-  #menu-btn:active { color:#fff; border-color:#fff; }
+  #menu-btn { cursor:pointer; color:#e8eaea; background:rgba(255,255,255,0.08); border:1.5px solid rgba(255,255,255,0.6);
+    border-radius:6px; min-height:44px; padding:0 12px; touch-action:manipulation;
+    font-family:inherit; letter-spacing:0.1em; font-size:clamp(12px,3.4vw,15px); }
+  #menu-btn:active { color:#000; background:#e8eaea; }
 
   #launcher {
     position:absolute; left:50%; top:-22px; transform:translateX(-50%);
@@ -144,6 +145,9 @@
 
   /* 메뉴가 떠 있을 때는 아래 바의 SETTINGS·MENU를 숨김 (메뉴 안의 것과 겹치지 않게) */
   body.ov-open #menu-btn { visibility:hidden; }
+  /* 첫 페이지: 게임 화면(테두리·NEXT·RECORD·발사대)을 숨겨 완전히 다른 화면으로 보이게 */
+  body.on-menu #bottom-bar { visibility:hidden; }
+  body.on-menu #field-box { border-color:transparent; box-shadow:none; }
   .go-score { font-size:clamp(54px,16vw,76px); line-height:1.05; color:#e8eaea; letter-spacing:0.04em;
     text-shadow:0 0 16px rgba(255,255,255,0.35); }
   .go-sub { font-size:clamp(13px,3.6vw,16px); letter-spacing:0.18em; color:#8a9090; }
@@ -252,7 +256,7 @@
     <div id="launcher"><canvas class="q-ball" id="launcher-ball"></canvas><div id="launcher-name"></div></div>
     <div id="right-area">
       <div id="record-label">RECORD&nbsp;&nbsp;0</div>
-      <div id="menu-btn">BACK TO MENU</div>
+      <button id="menu-btn" type="button">BACK TO MENU</button>
     </div>
   </div>
 </div>
@@ -272,7 +276,7 @@
   <div class="ov-links">
     <span id="settings-link">SETTINGS</span>
   </div>
-  <div id="ver">v1.1</div>
+  <div id="ver">v1.2</div>
 </div></div>
 
 <script>
@@ -697,10 +701,11 @@ if('serviceWorker' in navigator){
   function showOverlay(mode){
     overlay.dataset.mode=mode;
     document.body.classList.add('ov-open');
+    document.body.classList.toggle('on-menu', mode==='menu');
     overlay.classList.remove('hidden');
   }
   function hideOverlay(){
-    document.body.classList.remove('ov-open');
+    document.body.classList.remove('ov-open','on-menu');
     overlay.classList.add('hidden');
   }
 
@@ -1265,11 +1270,14 @@ if('serviceWorker' in navigator){
       // 메뉴 화면이 떠 있을 때는 뒤에 비치는 숫자(LEVEL 등)를 그리지 않음
       if(overlay.classList.contains('hidden')) drawHUD();
       if(running && !JPI.isOpen()) physics();
-      drawAim();
       animatePlanets(t === undefined ? performance.now() : t);
-      for(const b of balls) drawBall(b);
-      drawParticles();
-      drawLevelFlash();
+      // 첫 페이지에서는 하던 게임의 행성을 그리지 않음
+      if(!document.body.classList.contains('on-menu')){
+        drawAim();
+        for(const b of balls) drawBall(b);
+        drawParticles();
+        drawLevelFlash();
+      }
     }
     requestAnimationFrame(loop);
   }
@@ -1338,11 +1346,30 @@ if('serviceWorker' in navigator){
   document.getElementById('back-btn').addEventListener('click', showMenu);
   const HELP_ITEM={ title:'HOW TO PLAY', lines:HELP };
   document.getElementById('settings-link').addEventListener('click', ()=>JPI.openSettings(onSettingChange, HELP_ITEM));
-  menuBtn.addEventListener('click', ()=>{
+  function goMenu(){
+    if(!running) return;
     aiming=false;
     saveProgress();   // 진행 상태를 저장한 뒤 시작 화면으로 (CONTINUE로 이어하기)
     showMenu();
+  }
+  const onMenuBtn = (x,y)=>{
+    const r=menuBtn.getBoundingClientRect();
+    return x>=r.left-10 && x<=r.right+10 && y>=r.top-6 && y<=r.bottom+14;
+  };
+  // 휴대폰: 손가락을 떼는 순간 바로 이동 (화면 맨 아래에서 click이 늦거나 빠지는 경우 대비)
+  menuBtn.addEventListener('touchend', e=>{
+    const t=e.changedTouches[0];
+    if(!onMenuBtn(t.clientX, t.clientY)) return;
+    e.preventDefault(); goMenu();
   });
+  menuBtn.addEventListener('click', goMenu);
+  // 새 행성 카드가 떠 있을 때 BACK TO MENU 자리를 눌러도 카드를 닫고 첫 페이지로
+  document.addEventListener('click', e=>{
+    if(!running || !e.target.classList || !e.target.classList.contains('jpi-modal') || !onMenuBtn(e.clientX, e.clientY)) return;
+    e.stopPropagation();
+    for(let i=0;i<20;i++){ const c=document.querySelector('.jpi-modal .jpi-close'); if(!c) break; c.click(); }
+    goMenu();
+  }, true);
 
   // ───────── 행성 도감 (MY PLANETS) ─────────
   // 사실은 확인된 내용만. 게임 속 크기는 실제 비율이 아니므로 실제 크기는 size 줄로 따로 알려줌
