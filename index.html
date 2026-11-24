@@ -466,9 +466,19 @@ if('serviceWorker' in navigator){
   let bgCache=null;
   resize();
 
-  function quotaFor(lv){ return lv*5; }
+  // 난이도: 레벨마다 4번씩 더 (예전 5번) → 큰 행성이 더 빨리 등장
+  function quotaFor(lv){ return lv*4; }
   function maxTier(){ return Math.min(level, PLANETS.length)-1; }
-  function randTier(){ return Math.floor(Math.random()*(maxTier()+1)); }
+  // 큰 행성일수록 조금 더 자주 나옴 (판이 더 빨리 참). 태양은 너무 커서 보통 확률 그대로
+  function tierWeight(t){ return t===PLANETS.length-1 ? 1 : 1 + 0.3*t; }
+  function randTier(){
+    const top=maxTier();
+    let sum=0;
+    for(let t=0;t<=top;t++) sum+=tierWeight(t);
+    let r=Math.random()*sum;
+    for(let t=0;t<=top;t++){ r-=tierWeight(t); if(r<0) return t; }
+    return top;
+  }
   function radiusOf(tier){ return BALL_R*PLANETS[tier].size; }
   function massOf(tier){ const r=PLANETS[tier].size; return r*r; }   // 면적 기준: 태양이 무겁되 과하지 않게
 
@@ -1239,7 +1249,8 @@ if('serviceWorker' in navigator){
   function loop(t){
     if(frameDue(t === undefined ? performance.now() : t)){
       drawBackground();
-      drawHUD();
+      // 메뉴 화면이 떠 있을 때는 뒤에 비치는 숫자(LEVEL 등)를 그리지 않음
+      if(overlay.classList.contains('hidden')) drawHUD();
       if(running && !JPI.isOpen()) physics();
       drawAim();
       animatePlanets(t === undefined ? performance.now() : t);
