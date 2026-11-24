@@ -238,7 +238,7 @@
   .pb-facts p { position:relative; padding-left:14px; }
   .pb-facts p::before { content:'•'; position:absolute; left:0; color:#6c7171; }
   /* 나의 공간 (MY SPACE) */
-  #space { position:fixed; inset:0; z-index:50; background:#04060c; display:none; }
+  #space { position:fixed; inset:0; z-index:50; background:#03050a; display:none; }
   #space.on { display:block; }
   #space canvas { position:absolute; inset:0; width:100%; height:100%; display:block; }
   .sp-top { position:absolute; left:0; right:0; top:calc(var(--top) + 8px); text-align:center; pointer-events:none; }
@@ -255,6 +255,30 @@
   .sp-row b { font-family:'Special Elite',monospace; font-weight:400; font-size:18px; color:#e8eaea; text-align:right; }
   .sp-row b.soft { font-size:14px; color:#7a8080; }
   .sp-grow { align-self:stretch; font-family:-apple-system,'Segoe UI',sans-serif; font-size:13px; color:#9fe0a6; text-align:center; }
+  .sp-dust { font-size:15px; letter-spacing:0.1em; color:#ffd98a; margin-top:4px; }
+  .sp-name { font-size:13px; letter-spacing:0.2em; color:#8a9090; margin-top:2px; }
+  .sp-fill { align-self:stretch; display:flex; flex-direction:column; gap:12px; }
+  .sp-dots { position:absolute; left:0; right:0; bottom:calc(var(--sb) + 60px); display:flex; justify-content:center; }
+  .sp-dots button { width:30px; height:26px; background:none; border:none; padding:0; cursor:pointer; position:relative; }
+  .sp-dots button::after { content:''; position:absolute; left:11px; top:9px; width:8px; height:8px; border-radius:50%; background:#3a4242; }
+  .sp-dots button.on::after { background:#e8eaea; }
+  #sp-lock { position:absolute; left:24px; right:24px; bottom:calc(var(--sb) + 104px); text-align:center; pointer-events:none; display:none;
+    font-family:-apple-system,'Segoe UI',sans-serif; font-size:14px; line-height:1.6; color:#c8cccc; }
+  #sp-lock b { display:block; font-family:'Special Elite',monospace; font-weight:400; font-size:22px; letter-spacing:0.16em; color:#e8eaea; }
+  #sp-lock span { display:block; }
+  #sp-lock em { font-style:normal; font-size:12px; color:#8a9090; }
+  #sp-lock .sp-bar { max-width:220px; margin:8px auto 2px; }
+  .sp-buy { font-family:'Special Elite',monospace; font-size:16px; letter-spacing:0.1em; color:#000; background:#ffd98a; border:none; border-radius:6px;
+    min-height:44px; padding:0 22px; margin:8px 0 4px; cursor:pointer; touch-action:manipulation; }
+  .sp-buy:disabled { color:#8a9090; background:#1c2222; cursor:default; }
+  .sp-have { font-size:12px; color:#9a9f9f; }
+  .sp-done { color:#ffd98a; letter-spacing:0.1em; margin-top:4px; }
+  .sp-label { font-family:'Special Elite',monospace; font-size:12px; letter-spacing:0.16em; color:#8a9090; }
+  .sp-skins { display:flex; gap:6px; justify-content:center; flex-wrap:wrap; }
+  .sp-skins button { font-family:-apple-system,'Segoe UI',sans-serif; font-size:12px; min-height:34px; padding:0 10px; border-radius:6px; cursor:pointer;
+    color:#c8cccc; background:transparent; border:1px solid #3a3f3f; }
+  .sp-skins button.on { color:#000; background:#e8eaea; border-color:#e8eaea; }
+  .sp-skins button:disabled { color:#5e6666; cursor:default; }
   .sp-bar { height:8px; border-radius:4px; background:#1c2222; overflow:hidden; margin-top:6px; }
   .sp-bar i { display:block; height:100%; background:#78e68c; }
 
@@ -284,7 +308,9 @@
 
 <div id="space">
   <canvas id="space-cv"></canvas>
-  <div class="sp-top"><div class="sp-title">MY SPACE</div><div class="sp-sub" id="sp-sub"></div></div>
+  <div class="sp-top"><div class="sp-title">MY SPACE</div><div class="sp-name" id="sp-name"></div><div class="sp-dust" id="sp-dust"></div><div class="sp-sub" id="sp-hint"></div></div>
+  <div id="sp-lock"></div>
+  <div class="sp-dots" id="sp-dots"></div>
   <div class="sp-bottom"><button id="sp-guide" type="button">PLANET GUIDE</button><button id="sp-back" type="button">BACK TO MENU</button></div>
 </div>
 
@@ -303,7 +329,7 @@
   <div class="ov-links">
     <span id="settings-link">SETTINGS</span>
   </div>
-  <div id="ver">v1.4</div>
+  <div id="ver">v1.5</div>
 </div></div>
 
 <script>
@@ -328,6 +354,7 @@ if('serviceWorker' in navigator){
 </script>
 <script src="settings.js"></script>
 <script src="leaderboard.js"></script>
+<script src="space.js"></script>
 <script>
 (function(){
   // ───────── 행성 정의 (크기 순) ─────────
@@ -533,13 +560,13 @@ if('serviceWorker' in navigator){
   }
   // 작은 캔버스(대기열·카드·도감)에 필드와 같은 방식으로 행성을 그림. 돌려주는 draw(rot, t)로 자전시킬 수 있음
   // fill=false: 큰 행성일수록 조금 크게 (대기열) / fill=true: 모두 칸에 꽉 차게 (카드·도감)
-  function planetPainter(cv, tier, css, fill){
+  function planetPainter(cv, tier, css, fill, skinTex){
     css = css || cv.clientWidth || 32;
     const d = Math.min(window.devicePixelRatio||1, 2);
     cv.width = Math.round(css*d); cv.height = Math.round(css*d);
     const pad = tier===9 ? 1.75 : padOf(tier);
     const r = fill ? css/2/pad*0.94 : Math.min(css*0.42*Math.min(1, 0.55+0.16*PLANETS[tier].size), css/2/pad);
-    const tex = texture(tier), map = sphereMap(Math.max(3, Math.round(r*d)), tex, tier===9);
+    const tex = skinTex || texture(tier), map = sphereMap(Math.max(3, Math.round(r*d)), tex, tier===9);
     const surf = document.createElement('canvas'); surf.width = surf.height = map.size;
     const sc = surf.getContext('2d'), img = sc.createImageData(map.size, map.size);
     const c = cv.getContext('2d');
@@ -594,9 +621,9 @@ if('serviceWorker' in navigator){
   const SAVE_KEY='pb-save';
   function saveProgress(){
     if(!running) return;
-    saveGrow();
+    PBSpace.save();
     try{
-      const data={ balls, level, popped, until, queue, ballSeq, record, fw:W, fh:H };
+      const data={ balls, level, popped, until, queue, ballSeq, record, fw:W, fh:H, gd:gameDust };
       localStorage.setItem(SAVE_KEY, JSON.stringify(data));
     }catch(e){}
   }
@@ -625,11 +652,13 @@ if('serviceWorker' in navigator){
       }
     }
     pairCooldown.clear(); running=true;
+    resetEvents(); gameDust=d.gd||0;
     renderQueue(); updateHUD();
   }
 
   function newGame(){
     balls=[]; particles=[]; pairCooldown.clear();
+    resetEvents(); gameDust=0;
     level=1; popped=0; until=quotaFor(1);
     queue=[]; refillQueue();
     running=true;
@@ -658,6 +687,7 @@ if('serviceWorker' in navigator){
     });
     queue.shift();
     refillQueue();
+    onShot();
     sound(220, 0.1, 'triangle', 0.12);
     saveProgress();
   }
@@ -686,29 +716,91 @@ if('serviceWorker' in navigator){
   window.addEventListener('pointerup', endAim);
   window.addEventListener('pointercancel', ()=>{aiming=false;});
 
-  // ───────── 행성 키우기: 같은 행성끼리 박치기한 횟수만큼 MY SPACE의 그 행성이 자람 ─────────
-  // 큰 행성은 만나기 어려우므로 필요한 횟수를 줄임. LV1에서 시작해 LV5가 끝
-  const GROW_KEY='pb-grow', GROW_STEPS=[10,30,80,200], GROW_EASE=[1,1,0.8,0.7,0.6,0.5,0.4,0.3,0.2,0.1];
-  const GROW_MAX=GROW_STEPS.length+1;
-  let grow=(()=>{
-    let g=null; try{ g=JSON.parse(localStorage.getItem(GROW_KEY)); }catch(e){}
-    return PLANETS.map((_,i)=>Array.isArray(g) && g[i]>0 ? Math.floor(g[i]) : 0);
-  })();
-  let growDirty=false, growToast=null;
-  function growNeed(t, step){ return Math.ceil(GROW_STEPS[step]*GROW_EASE[t]); }
-  function growLevel(t){ let lv=1; for(let i=0;i<GROW_STEPS.length;i++) if(grow[t]>=growNeed(t,i)) lv=i+2; return lv; }
-  function growBonk(t){
-    const before=growLevel(t);
-    grow[t]++; growDirty=true;
-    const now=growLevel(t);
-    if(now>before){
-      growToast={ text:PLANETS[t].name.toUpperCase()+' GREW!  LV '+now, color:PLANETS[t].color, life:1 };
-      sound(740, 0.3, 'sine', 0.16);
+  // ───────── 별가루: 박치기·레벨 업·우주선 잡기로 모아 MY SPACE에서 씀 (화면에는 숫자로만 보여 우주는 어둡게) ─────────
+  let gameDust=0, toast=null;
+  function gain(n){ gameDust+=n; PBSpace.earn(n); }
+  function bonkDust(t){ gain(t>=7 ? 3 : t>=4 ? 2 : 1); }
+
+  // ───────── 지나가는 우주선 · 후반 방해 요소 ─────────
+  let flyer=null, hazard=null, flyerIn=6, hazardIn=5, flyersThisLevel=0;
+  function resetEvents(){ flyer=null; hazard=null; flyerIn=5+Math.floor(Math.random()*4); hazardIn=4; flyersThisLevel=0; toast=null; }
+  // 쏠 때마다 세어서, 가끔 우주선이 지나가고 레벨 4부터 방해 요소가 나옴
+  function onShot(){
+    if(!flyer && flyersThisLevel<3 && --flyerIn<=0){ spawnFlyer(); flyerIn=6+Math.floor(Math.random()*5); }
+    if(level>=4 && !hazard && --hazardIn<=0){ spawnHazard(); hazardIn=Math.max(3, 9-level); }
+  }
+  function spawnFlyer(){
+    const id=PBSpace.SHIP_IDS[Math.floor(Math.random()*PBSpace.SHIP_IDS.length)];
+    const dir=Math.random()<0.5 ? 1 : -1, fast=id==='halley';
+    flyer={ id, dir, x:dir>0?-30:W+30, y0:80+Math.random()*190, y:0, v:(fast?1.9:1.1), t:0 };
+    flyer.y=flyer.y0; flyersThisLevel++;
+  }
+  function spawnHazard(){
+    const kinds=['hole']; if(level>=5) kinds.push('debris'); if(level>=6) kinds.push('flare');
+    const type=kinds[Math.floor(Math.random()*kinds.length)];
+    if(type==='hole'){
+      hazard={ type, x:W*(0.25+Math.random()*0.5), y:H*(0.22+Math.random()*0.3), life:900, t:0 };
+      toast={ text:'BLACK HOLE', color:'#b79cff', life:1 };
+    }else if(type==='debris'){
+      const rocks=[];
+      for(let n=0; n<40 && rocks.length<3; n++){
+        const x=30+Math.random()*(W-60), y=110+Math.random()*310, r=9+Math.random()*4;
+        if(balls.some(b=>Math.hypot(b.x-x,b.y-y)<b.r+r+10) || rocks.some(k=>Math.hypot(k.x-x,k.y-y)<60)) continue;
+        rocks.push({ x, y, r, hp:2, a:Math.random()*6 });
+      }
+      if(!rocks.length) return;
+      hazard={ type, rocks, life:2400, t:0 };
+      toast={ text:'SPACE DEBRIS', color:'#b8b2a8', life:1 };
+    }else{
+      hazard={ type, life:170, t:0 };
+      toast={ text:'SOLAR FLARE!', color:'#ffb45c', life:1 };
+      sound(200, 0.6, 'sawtooth', 0.1);
     }
   }
-  function saveGrow(){
-    if(!growDirty) return;
-    try{ localStorage.setItem(GROW_KEY, JSON.stringify(grow)); growDirty=false; }catch(e){}
+  function eventStep(){
+    if(flyer){
+      const f=flyer; f.t++; f.x+=f.dir*f.v; f.y=f.y0+Math.sin(f.t*0.02)*8;
+      if(balls.some(b=>Math.hypot(b.x-f.x,b.y-f.y)<b.r+15)) catchFlyer();
+      else if(f.x<-40 || f.x>W+40) flyer=null;
+    }
+    if(!hazard) return;
+    const z=hazard; z.t++;
+    if(z.type==='hole'){
+      // 움직이는 행성만 끌어당겨 길을 휘게 함 (멈춘 행성은 그대로)
+      for(const b of balls){
+        if(Math.hypot(b.vx,b.vy)<0.6) continue;
+        const dx=z.x-b.x, dy=z.y-b.y, d=Math.hypot(dx,dy);
+        if(d<1 || d>140) continue;
+        const a=0.04+0.16*(1-d/140);
+        b.vx+=dx/d*a; b.vy+=dy/d*a;
+      }
+    }else if(z.type==='debris'){
+      for(const k of z.rocks){
+        for(const b of balls){
+          const dx=b.x-k.x, dy=b.y-k.y, d=Math.hypot(dx,dy), m=b.r+k.r;
+          if(d>=m || d<0.0001) continue;
+          const nx=dx/d, ny=dy/d, vn=b.vx*nx+b.vy*ny;
+          b.x+=nx*(m-d); b.y+=ny*(m-d);
+          if(vn<0){ b.vx-=1.7*vn*nx; b.vy-=1.7*vn*ny; if(vn<-1){ k.hp--; sparks(k.x,k.y,'#8d877c',6,1.4); sound(150,0.08,'square',0.06); } }
+        }
+      }
+      z.rocks=z.rocks.filter(k=>k.hp>0);
+      if(!z.rocks.length) z.life=0;
+    }else if(z.t===120){
+      // 태양 폭풍: 모든 행성을 아래로 밀어냄 (가벼울수록 더)
+      for(const b of balls) b.vy+=2/Math.sqrt(PLANETS[b.tier].size);
+    }
+    if(z.t>=z.life) hazard=null;
+  }
+  function catchFlyer(){
+    const f=flyer, dustN=f.id==='halley' ? 25 : 15;
+    flyer=null;
+    popped+=3; if(popped>record) record=popped;
+    gain(dustN);
+    toast={ text:'+3  ·  ✦ '+dustN, color:'#ffd98a', life:1 };
+    sparks(f.x, f.y, '#ffd98a', 8, 1.6);
+    sound(920, 0.25, 'sine', 0.16); JPI.vibrate(20);
+    if(PBSpace.catchShip(f.id)) PBSpace.shipCard(f.id);
   }
 
   // ───────── 규칙: 같은 행성 → 한 단계 축소, 달끼리 → 소멸 ─────────
@@ -732,6 +824,7 @@ if('serviceWorker' in navigator){
       until=quotaFor(level);
       sound(660, 0.3, 'sine', 0.18); JPI.vibrate([30,60,30]);
       flashLevel=1;
+      gain(3); flyersThisLevel=0;
       saveProgress();
       discoverAvailable();
     }
@@ -767,7 +860,7 @@ if('serviceWorker' in navigator){
   // 게임 오버: 이번 점수와 세계 순위만 크게. 지난 기록(TOP 5)은 RANKING → MY BEST에서 봄
   function endGame(){
     running=false;
-    saveGrow();
+    PBSpace.save();
     clearProgress();
     let prevBest=0; try{ prevBest=parseInt(localStorage.getItem('pb-record'))||0; }catch(e){}
     saveScore();
@@ -775,6 +868,7 @@ if('serviceWorker' in navigator){
     overlayStats.style.display='block';
     overlayStats.innerHTML='<div class="go-score">'+popped+'</div>'
       +'<div class="go-sub">SCORE · LEVEL '+level+'</div>'
+      +(gameDust>0 ? '<div class="go-sub" style="color:#ffd98a">✦ '+gameDust+' STARDUST</div>' : '')
       +(popped>prevBest && popped>0 ? '<div class="go-best">NEW BEST!</div>' : '<div class="go-sub">BEST '+record+'</div>');
     overlayHint.style.display='none';
     startBtn.textContent='RETRY';
@@ -789,6 +883,7 @@ if('serviceWorker' in navigator){
 
   // ───────── 물리 (질량 기반) ─────────
   function physics(){
+    eventStep();
     for(const [k,v] of pairCooldown){
       if(v<=1) pairCooldown.delete(k);
       else pairCooldown.set(k, v-1);
@@ -830,7 +925,7 @@ if('serviceWorker' in navigator){
               const col=PLANETS[a.tier].color;
               sparks((a.x+c.x)/2, (a.y+c.y)/2, col, 16, 2.6);
               sparks((a.x+c.x)/2, (a.y+c.y)/2, '#ffffff', 6, 1.8);
-              growBonk(a.tier);
+              bonkDust(a.tier);
               shrink(a); shrink(c);
               if(dist>0.0001){
                 const knx=dx/dist, kny=dy/dist;
@@ -1314,17 +1409,50 @@ if('serviceWorker' in navigator){
     ctx.fillText('SCORE '+popped+'  ·  BEST '+record, W/2, H*0.5+70);
     ctx.restore();
   }
-  // 행성이 자랐을 때 위쪽에 잠깐 알림
-  function drawGrowToast(){
-    if(!growToast) return;
-    growToast.life-=0.008;
-    if(growToast.life<=0){ growToast=null; return; }
+  // 위쪽에 잠깐 나오는 알림
+  function drawToast(){
+    if(!toast) return;
+    toast.life-=0.01;
+    if(toast.life<=0){ toast=null; return; }
     ctx.save();
-    ctx.globalAlpha=Math.min(1, growToast.life*3);
+    ctx.globalAlpha=Math.min(1, toast.life*3);
     ctx.font='20px "Special Elite", monospace';
     ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillStyle=growToast.color; ctx.shadowColor=growToast.color; ctx.shadowBlur=14;
-    ctx.fillText(growToast.text, W/2, 44);
+    ctx.fillStyle=toast.color; ctx.shadowColor=toast.color; ctx.shadowBlur=8;
+    ctx.fillText(toast.text, W/2, 40);
+    ctx.restore();
+  }
+  function drawFlyer(){
+    if(!flyer) return;
+    ctx.save(); ctx.translate(flyer.x, flyer.y); if(flyer.dir<0) ctx.scale(-1,1);
+    PBSpace.drawShip(ctx, flyer.id, 15, animT);
+    ctx.restore();
+  }
+  function drawHazard(){
+    if(!hazard) return;
+    const z=hazard, fade=Math.min(1, z.t/40, (z.life-z.t)/40);
+    ctx.save(); ctx.globalAlpha=Math.max(0,fade);
+    if(z.type==='hole'){
+      const g=ctx.createRadialGradient(z.x,z.y,14,z.x,z.y,140);
+      g.addColorStop(0,'rgba(120,90,200,0.28)'); g.addColorStop(1,'rgba(60,40,120,0)');
+      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(z.x,z.y,140,0,Math.PI*2); ctx.fill();
+      ctx.translate(z.x,z.y); ctx.rotate(z.t*0.02);
+      ctx.strokeStyle='rgba(183,156,255,0.6)'; ctx.lineWidth=2; ctx.setLineDash([26,12]);
+      ctx.beginPath(); ctx.arc(0,0,21,0,Math.PI*2); ctx.stroke();
+      ctx.setLineDash([]); ctx.fillStyle='#000'; ctx.beginPath(); ctx.arc(0,0,15,0,Math.PI*2); ctx.fill();
+    }else if(z.type==='debris'){
+      for(const k of z.rocks){
+        ctx.save(); ctx.translate(k.x,k.y); ctx.rotate(k.a+z.t*0.01);
+        ctx.fillStyle=k.hp>1 ? '#6f6a61' : '#4d4943'; ctx.strokeStyle='#969085'; ctx.lineWidth=1.2;
+        ctx.beginPath(); for(let i=0;i<7;i++){ const q=k.r*(0.8+0.25*((i*37)%5)/4), a=i/7*Math.PI*2; ctx.lineTo(Math.cos(a)*q, Math.sin(a)*q); } ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.restore();
+      }
+    }else{
+      const push=z.t<120 ? 0.12+0.08*Math.sin(z.t*0.2) : 0.3*(1-(z.t-120)/50);
+      const g=ctx.createLinearGradient(0,0,0,H*0.55);
+      g.addColorStop(0,'rgba(255,150,50,'+Math.max(0,push).toFixed(3)+')'); g.addColorStop(1,'rgba(255,100,0,0)');
+      ctx.fillStyle=g; ctx.fillRect(0,0,W,H*0.55);
+    }
     ctx.restore();
   }
 
@@ -1346,11 +1474,13 @@ if('serviceWorker' in navigator){
       animatePlanets(t === undefined ? performance.now() : t);
       // 첫 페이지에서는 하던 게임의 행성을 그리지 않음
       if(!document.body.classList.contains('on-menu')){
+        drawHazard();
         drawAim();
         for(const b of balls) drawBall(b);
+        drawFlyer();
         drawParticles();
         drawLevelFlash();
-        drawGrowToast();
+        drawToast();
       }
     }
     requestAnimationFrame(loop);
@@ -1409,7 +1539,10 @@ if('serviceWorker' in navigator){
     'Bonk two Moons together and they vanish.',
     'Bigger planets are heavier: they fly slower and are harder to push.',
     'Every time a planet shrinks, UNTIL NEXT LEVEL drops by 1. At 0 you level up and bigger planets start to appear.',
-    'If a planet rolls all the way past the bottom line, the game is over.'
+    'If a planet rolls all the way past the bottom line, the game is over.',
+    'Bonk planets to earn Stardust, then spend it in MY SPACE to grow your planets.',
+    'Hit a spacecraft flying by for +3 points and extra Stardust.',
+    'Later levels bring black holes, space debris and solar flares.'
   ];
   function onSettingChange(key, val){
     if(key==='music' && bgm.isOn()!==val) bgm.toggle();
@@ -1524,8 +1657,8 @@ if('serviceWorker' in navigator){
     cardNow=cardQueue.shift();
     showPlanetCard(cardNow, ()=>{ markSeen(cardNow); cardNow=-1; cardOpen=false; nextCard(); });
   }
-  function spinner(cv, tier, css){
-    const draw=planetPainter(cv, tier, css, true);
+  function spinner(cv, tier, css, skinTex){
+    const draw=planetPainter(cv, tier, css, true, skinTex);
     const period=PERIOD[tier]||40, t0=performance.now();
     let alive=true;
     (function frame(){
@@ -1607,162 +1740,13 @@ if('serviceWorker' in navigator){
     c.fillStyle='#4e5454'; c.font=(r*1.1)+'px "Special Elite", monospace';
     c.textAlign='center'; c.textBaseline='middle'; c.fillText('?',0,2);
   }
-  document.getElementById('guide-btn').addEventListener('click', openSpace);
-
-  // ───────── 나의 공간 (MY SPACE): 지구를 중심으로 모은 행성이 도는 화면 ─────────
-  const EARTH=4;
-  const spaceEl=document.getElementById('space'), spaceCv=document.getElementById('space-cv');
-  const ORBIT=[0,1,2,3,5,6,7,8,9];                       // 안쪽 궤도부터 (지구는 가운데)
-  const SPACE_R=[7,8,9.5,11.5,32,14,15,15,19,21];        // 화면에서의 크기 (LV1, 가로 400 기준)
-  const SPACE_PERIOD=[16,22,28,34,0,42,50,58,66,76];     // 한 바퀴 도는 데 걸리는 초
-  let space=null;
-  function spaceRadius(t, k){ return SPACE_R[t]*k*(1+0.12*(growLevel(t)-1)); }
-  function buildSpace(){
-    const vw=spaceEl.clientWidth, vh=spaceEl.clientHeight, d=Math.min(window.devicePixelRatio||1, 2);
-    spaceCv.width=Math.round(vw*d); spaceCv.height=Math.round(vh*d);
-    const top=document.querySelector('.sp-top').getBoundingClientRect().bottom+10;
-    const bottom=document.querySelector('.sp-bottom').getBoundingClientRect().top-14;
-    const k=Math.max(0.6, Math.min(1.4, Math.min(vw/400, (bottom-top)/560)));
-    const rx=Math.min(vw/2-34*k, 330), ry=Math.min((bottom-top)/2-34*k, rx*1.5);
-    const bg=document.createElement('canvas'); bg.width=spaceCv.width; bg.height=spaceCv.height;
-    const c=bg.getContext('2d'); c.setTransform(d,0,0,d,0,0);
-    c.fillStyle='#04060c'; c.fillRect(0,0,vw,vh);
-    const cx=vw/2, cy=(top+bottom)/2;
-    const glow=c.createRadialGradient(cx,cy,0,cx,cy,Math.max(vw,vh)*0.6);
-    glow.addColorStop(0,'rgba(40,80,160,0.22)'); glow.addColorStop(1,'rgba(0,0,0,0)');
-    c.fillStyle=glow; c.fillRect(0,0,vw,vh);
-    const rnd=seeded(21);
-    for(let i=0;i<230;i++){
-      c.fillStyle='rgba(255,255,255,'+(0.2+rnd()*0.7).toFixed(2)+')';
-      c.beginPath(); c.arc(rnd()*vw, rnd()*vh, 0.35+rnd()*1.0, 0, Math.PI*2); c.fill();
-    }
-    const list=ORBIT.map((t,i)=>{
-      const f=0.34+0.66*i/(ORBIT.length-1);
-      return { t, rx:rx*f, ry:ry*f, a0:i*2.4, found:isFound(t), r:spaceRadius(t,k), x:0, y:0 };
-    });
-    c.lineWidth=1;
-    for(const o of list){
-      c.strokeStyle=o.found ? rgba(PLANETS[o.t].color,0.32) : 'rgba(255,255,255,0.09)';
-      c.setLineDash(o.found ? [] : [3,6]);
-      c.beginPath(); c.ellipse(cx,cy,o.rx,o.ry,0,0,Math.PI*2); c.stroke();
-    }
-    const earth={ t:EARTH, found:true, r:spaceRadius(EARTH,k), x:cx, y:cy };
-    for(const o of list.concat(earth)){
-      if(!o.found) continue;
-      const css=o.r*2*(o.t===9 ? 1.75 : padOf(o.t))/0.94;
-      o.css=css; o.cv=document.createElement('canvas'); o.draw=planetPainter(o.cv, o.t, css, true);
-      o.draw(0,0);
-    }
-    return { vw, vh, d, cx, cy, bg, list, earth, n:0 };
-  }
-  let spaceRaf=0;
-  function spaceFrame(now){
-    if(!space) return;
-    spaceRaf=requestAnimationFrame(spaceFrame);
-    const s=now/1000, v=space, c=spaceCv.getContext('2d');
-    c.setTransform(1,0,0,1,0,0); c.drawImage(v.bg,0,0);
-    c.setTransform(v.d,0,0,v.d,0,0);
-    v.n++;
-    for(const o of v.list){
-      const a=o.a0+s/SPACE_PERIOD[o.t]*Math.PI*2;
-      o.x=v.cx+Math.cos(a)*o.rx; o.y=v.cy+Math.sin(a)*o.ry;
-    }
-    // 뒤(위쪽)에 있는 것부터 그려 앞뒤가 자연스럽게
-    const all=v.list.concat(v.earth).sort((p,q)=>p.y-q.y);
-    for(const o of all){
-      if(o.found){
-        if((v.n+o.t)%3===0) o.draw(s/(PERIOD[o.t]||40), s);
-        c.drawImage(o.cv, o.x-o.css/2, o.y-o.css/2, o.css, o.css);
-      }else{
-        c.fillStyle='#0d1010'; c.strokeStyle='#3a4242'; c.lineWidth=1.2;
-        c.beginPath(); c.arc(o.x,o.y,9,0,Math.PI*2); c.fill(); c.stroke();
-        c.fillStyle='#6c7171'; c.font='11px "Special Elite", monospace'; c.textAlign='center'; c.textBaseline='middle';
-        c.fillText('?', o.x, o.y+1);
-      }
-    }
-  }
-  function openSpace(){
-    if(space) return;
-    saveGrow();
-    document.getElementById('sp-sub').innerHTML=foundCount()+' / '+PLANETS.length+' COLLECTED<br>Tap Earth for your scores. Tap a planet to see it grow.<br>An imaginary space, not to scale.';
-    spaceEl.classList.add('on');
-    space=buildSpace();
-    cancelAnimationFrame(spaceRaf);
-    spaceRaf=requestAnimationFrame(spaceFrame);
-  }
-  function closeSpace(){ space=null; cancelAnimationFrame(spaceRaf); spaceEl.classList.remove('on'); renderGuideBtn(); }
-  window.addEventListener('resize', ()=>{ if(space) space=buildSpace(); });
-  document.getElementById('sp-back').addEventListener('click', closeSpace);
-  document.getElementById('sp-guide').addEventListener('click', openGuide);
-  spaceCv.addEventListener('click', e=>{
-    if(!space) return;
-    let best=null, bestD=1e9;
-    for(const o of space.list.concat(space.earth)){
-      const dist=Math.hypot(o.x-e.clientX, o.y-e.clientY)-(o.found ? o.r : 9);
-      if(dist<14 && dist<bestD){ best=o; bestD=dist; }
-    }
-    if(!best) return;
-    sound(520, 0.1, 'sine', 0.1);
-    if(best.t===EARTH) openScores();
-    else if(best.found) openPlanet(best.t);
-    else{
-      const m=document.createElement('div'); m.className='pb-card';
-      const cv=document.createElement('canvas'); cv.style.width=cv.style.height='90px'; lockedIcon(cv,90);
-      const p=document.createElement('div'); p.className='pb-fact';
-      p.textContent=best.t<=3 ? 'Play a game to discover this one.' : 'Reach LEVEL '+(best.t-2)+' to discover this one.';
-      m.append(cv,p); JPI.modal('???', m);
-    }
+  document.getElementById('guide-btn').addEventListener('click', ()=>PBSpace.open());
+  PBSpace.init({
+    PLANETS, FACTS, PERIOD, planetPainter, spinner, texture, padOf, rgba, seeded, sound, lockedIcon, isFound, openGuide, loadProgress,
+    record:()=>record,
+    howToFind:t=>t<=3 ? 'Play a game to discover this one.' : 'Reach LEVEL '+(t-2)+' to discover this one.',
+    onClose:renderGuideBtn
   });
-  function growView(t){
-    const lv=growLevel(t), el=document.createElement('div'); el.className='sp-grow';
-    if(lv>=GROW_MAX){ el.textContent='LV '+lv+' · FULLY GROWN'; return el; }
-    const need=growNeed(t,lv-1), from=lv>1 ? growNeed(t,lv-2) : 0, left=need-grow[t];
-    const text=document.createElement('div'); text.textContent='LV '+lv+' · '+left+' more '+(left===1?'bonk':'bonks')+' to grow';
-    const bar=document.createElement('div'); bar.className='sp-bar';
-    const fill=document.createElement('i'); fill.style.width=Math.max(0,Math.min(100,(grow[t]-from)/(need-from)*100))+'%';
-    bar.appendChild(fill); el.append(text, bar);
-    return el;
-  }
-  function openPlanet(t){
-    const v=detailView(t, 120);
-    const list=document.createElement('div'); list.className='pb-facts';
-    for(const f of v.f.facts){ const p=document.createElement('p'); p.textContent=f; list.appendChild(p); }
-    v.wrap.append(growView(t), list);
-    let stop=()=>{};
-    JPI.modal('LV '+growLevel(t), v.wrap, ()=>stop());
-    stop=spinner(v.cv, t, 120);
-  }
-  // 지구를 누르면: 지금 점수 · 최고 점수 · 세계 순위
-  function openScores(){
-    const wrap=document.createElement('div'); wrap.className='pb-card';
-    const rows=document.createElement('div'); rows.className='sp-rows';
-    const set=(b, text, soft)=>{ b.textContent=text; b.className=soft?'soft':''; };
-    const add=(label, value, soft)=>{
-      const r=document.createElement('div'); r.className='sp-row';
-      const n=document.createElement('span'); n.textContent=label;
-      const b=document.createElement('b'); set(b, value, soft);
-      r.append(n,b); rows.appendChild(r); return b;
-    };
-    if(PBRank.getName()) add('Player', PBRank.getName());
-    const saved=loadProgress();
-    let last=null; try{ last=JSON.parse(localStorage.getItem('pb-last')); }catch(e){}
-    if(saved) add('Current game', (saved.popped||0)+' · LEVEL '+(saved.level||1));
-    else if(last) add('Last game', last.s+' · LEVEL '+last.l);
-    else add('Last game', 'None yet', true);
-    add('My best', String(record));
-    const online=PBRank.enabled();
-    const wk=add('World rank, this week', online?'…':'Coming soon', true);
-    const al=add('World rank, all time', online?'…':'Coming soon', true);
-    if(online) for(const [which,b] of [['week',wk],['all',al]]){
-      const best=PBRank.myBest(which);
-      if(!(best>0)){ set(b,'Not ranked yet',true); continue; }
-      PBRank.rankOf(which, best).then(r=>set(b,'#'+r.rank,false)).catch(()=>set(b,'Offline',true));
-    }
-    const about=document.createElement('button'); about.className='pb-back'; about.textContent='ABOUT EARTH';
-    about.addEventListener('click', ()=>openPlanet(EARTH));
-    wrap.append(rows, growView(EARTH), about);
-    JPI.modal('MY SCORES', wrap);
-  }
 
   // ───────── 닉네임 · 전 세계 순위표 ─────────
   const rankLine=document.getElementById('rank-line');
