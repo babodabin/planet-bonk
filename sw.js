@@ -1,5 +1,5 @@
 // Planet Bonk — 오프라인 캐시
-const CACHE = 'pb-v2';
+const CACHE = 'pb-v3';
 const ASSETS = [
   './',
   './index.html',
@@ -37,8 +37,11 @@ self.addEventListener('fetch', e => {
   const isHTML = req.mode === 'navigate' || (req.headers.get('accept')||'').includes('text/html');
   const isJS = new URL(req.url).pathname.endsWith('.js');
   if (isHTML || isJS) {
+    // 우리 사이트 파일은 휴대폰에 남아 있는 옛 사본(최대 10분)을 쓰지 말고 매번 새 버전인지 확인
+    const sameSite = new URL(req.url).origin === self.location.origin;
+    const fresh = sameSite ? new Request(req.url, { cache: 'no-cache', credentials: 'same-origin' }) : req;
     e.respondWith(
-      fetch(req).then(res => {
+      fetch(fresh).then(res => {
         const copy = res.clone();
         caches.open(CACHE).then(c => c.put(req, copy)).catch(()=>{});
         return res;
