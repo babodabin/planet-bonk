@@ -1,8 +1,10 @@
 // Planet Bonk — 오프라인 캐시
-const CACHE = 'pb-v14';
+// 캐시 이름은 등록할 때 붙인 버전(sw.js?v=2.2)을 따름 — 버전은 version.js 한 곳에서만 바꿈
+const CACHE = 'pb-' + (new URL(self.location).searchParams.get('v') || 'dev');
 const ASSETS = [
   './',
   './index.html',
+  './version.js',
   './settings.js',
   './leaderboard.js',
   './ship.js',

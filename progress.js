@@ -97,7 +97,7 @@
     'pb-daily':v=>v && /^\d{4}-\d\d-\d\d$/.test(v.day) && /^(\d{4}-\d\d-\d\d)?$/.test(v.last||'') && isInt(v.streak,100000) && Array.isArray(v.p) && v.p.length===3 && v.p.every(x=>isInt(x,1e6)) && Array.isArray(v.done) && v.done.length===3,
     'pb-save':v=>v && Array.isArray(v.balls) && v.balls.length<=200 && v.balls.every(b=>b && isInt(b.tier,9) && coord(b.x) && coord(b.y) && coord(b.vx) && coord(b.vy) && isInt(b.id,1e9))
       && Array.isArray(v.queue) && v.queue.length===4 && v.queue.every(t=>isInt(t,9)) && isInt(v.level,1000) && v.level>=1 && isInt(v.popped,1e6)
-      && coord(v.until) && isInt(v.record,1e6) && isInt(v.ballSeq,1e9) && (v.gd===undefined || isInt(v.gd,1e6)) && (v.sh===undefined || isInt(v.sh,9))
+      && coord(v.until) && isInt(v.record,1e6) && isInt(v.ballSeq,1e9) && (v.gd===undefined || isInt(v.gd,1e6)) && (v.sh===undefined || isInt(v.sh,9)) && (v.seed===undefined || isInt(v.seed,1e9)) && (v.rs===undefined || (Number.isInteger(v.rs) && Math.abs(v.rs)<2**32))
   };
   function sum(s){ let h=2166136261; for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); } return (h>>>0).toString(36); }
   function makeCode(){

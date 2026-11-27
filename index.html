@@ -12,6 +12,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="theme-color" content="#000000">
 <link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
 <link href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" rel="stylesheet">
 <style>
   /* 위: 아이폰은 상태바 칸에 맡기고 조금만 띄움. 그 밖의 전체 화면 기기는 카메라 구멍을 피해 40px
@@ -102,7 +103,7 @@
     font-size:clamp(12px, 3.4vw, 14px); color:#6c7171;
     text-align:center; line-height:1.7; max-width:290px;
   }
-  #overlay button {
+  #overlay button { min-height:44px;
     font-family:'Special Elite','Apple SD Gothic Neo',-apple-system,sans-serif;
     font-size:clamp(15px, 3.6vw, 18px); letter-spacing:0.14em;
     color:#000; background:#e8eaea;
@@ -125,14 +126,14 @@
   }
   #classic-link:active { color:#fff; }
   .ov-links { order:4; display:flex; gap:22px; margin-top:16px; }
-  .ov-links span {
+  .ov-links span { display:inline-flex; align-items:center; min-height:44px; padding:0 14px;
     color:#9a9f9f; font-size:clamp(13px,3.8vw,16px); letter-spacing:0.15em; cursor:pointer;
     border-bottom:1px solid #3a3f3f; padding-bottom:2px;
   }
   .ov-links span:active { color:#fff; }
   /* MY PLANETS · RANKING: 작게, 한 줄에 나란히 */
   .ov-row { order:3; display:flex; gap:8px; margin-top:18px; }
-  #overlay .ov-row button {
+  #overlay .ov-row button { min-height:44px;
     font-size:clamp(12px,3.2vw,14px); letter-spacing:0.06em; padding:10px 10px;
     background:transparent; box-shadow:none; border-radius:6px;
   }
@@ -165,7 +166,7 @@
   }
   #rank-line b { font-family:'Special Elite',monospace; font-weight:400; font-size:1.35em; letter-spacing:0.1em; color:#ffe7b0; }
   #rank-line .sub { color:#c9b88f; font-size:0.9em; }
-  #rank-line .join {
+  #rank-line .join { min-height:44px; line-height:30px;
     display:inline-block; margin-top:2px; padding:6px 16px; cursor:pointer;
     font-family:'Special Elite',monospace; letter-spacing:0.12em; font-size:0.95em;
     color:#ffd98a; border:1px solid rgba(255,210,120,0.6); border-radius:4px;
@@ -174,13 +175,13 @@
 
   /* 순위표 · 닉네임 창 */
   .rk-tabs { display:flex; gap:6px; }
-  .rk-tabs button {
+  .rk-tabs button { min-height:44px;
     flex:1; font-family:'Special Elite',monospace; font-size:12px; letter-spacing:0.05em;
     padding:7px 4px; border-radius:6px; cursor:pointer;
     background:transparent; color:#7a8080; border:1px solid #3a3f3f;
   }
   .rk-tabs button.on { color:#000; background:#ffd98a; border-color:#ffd98a; }
-  .rk-note { font-family:-apple-system,'Segoe UI',sans-serif; font-size:11px; color:#6c7171; text-align:center; margin-top:-8px; }
+  .rk-note { font-family:-apple-system,'Segoe UI',sans-serif; font-size:11px; color:#959c9c; text-align:center; margin-top:-8px; }
   .rk-you { text-align:center; font-family:'Special Elite',monospace; font-size:14px; letter-spacing:0.12em; color:#ffd98a;
     background:rgba(255,210,120,0.08); border:1px solid rgba(255,210,120,0.35); border-radius:6px; padding:8px; }
   .rk-you b { font-weight:400; font-size:1.3em; color:#ffe7b0; }
@@ -203,7 +204,7 @@
     font-family:-apple-system,'Segoe UI',sans-serif; font-size:13px; color:#9a9f9f;
     border-top:1px solid #2a2f2f; padding-top:12px; }
   .rk-me b { color:#e8eaea; font-weight:600; }
-  .rk-link { font-family:'Special Elite',monospace; font-size:12px; letter-spacing:0.12em; color:#ffd98a;
+  .rk-link { min-height:44px; font-family:'Special Elite',monospace; font-size:12px; letter-spacing:0.12em; color:#ffd98a;
     background:none; border:1px solid rgba(255,210,120,0.5); border-radius:6px; padding:5px 10px; cursor:pointer; }
   .rk-form { display:flex; flex-direction:column; gap:10px; }
   .rk-form p { font-family:-apple-system,'Segoe UI',sans-serif; font-size:14px; line-height:1.55; color:#c8cccc; text-align:center; }
@@ -229,7 +230,7 @@
   .pb-order { font-family:-apple-system,'Segoe UI',sans-serif; font-size:12px; line-height:1.6; color:#8a9090; white-space:pre-line; }
   .pb-size { font-family:-apple-system,'Segoe UI',sans-serif; font-size:13px; color:#9fc4ff; }
   .pb-count { font-family:'Special Elite',monospace; text-align:center; font-size:15px; letter-spacing:0.12em; color:#c8cccc; }
-  .pb-note { font-family:-apple-system,'Segoe UI',sans-serif; text-align:center; font-size:11px; color:#6c7171; margin-top:-8px; }
+  .pb-note { font-family:-apple-system,'Segoe UI',sans-serif; text-align:center; font-size:11px; color:#959c9c; margin-top:-8px; }
   .pb-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
   .pb-cell {
     display:flex; flex-direction:column; align-items:center; gap:4px; padding:8px 2px 6px;
@@ -239,7 +240,7 @@
   .pb-cell.locked { cursor:default; }
   .pb-cell canvas { width:56px; height:56px; }
   .pb-cell span { font-family:-apple-system,'Segoe UI',sans-serif; font-size:11px; color:#c8cccc; }
-  .pb-cell.locked span { color:#4e5454; }
+  .pb-cell.locked span { color:#8a9292; }
   .pb-facts { font-family:-apple-system,'Segoe UI',sans-serif; font-size:14px; line-height:1.6; color:#c8cccc;
     display:flex; flex-direction:column; gap:8px; text-align:left; align-self:stretch; }
   .pb-facts p { position:relative; padding-left:14px; }
@@ -264,7 +265,7 @@
   .sp-grow { align-self:stretch; font-family:-apple-system,'Segoe UI',sans-serif; font-size:13px; color:#9fe0a6; text-align:center; }
   .ms-list { display:flex; flex-direction:column; gap:6px; text-align:left; }
   .ms-row { display:flex; align-items:center; gap:10px; padding:6px 8px; border:1px solid #2a2f2f; border-radius:8px; }
-  .ms-row.on { border-color:#ffd98a; } .ms-row.off { opacity:0.5; }
+  .ms-row.on { border-color:#ffd98a; } .ms-row.off { opacity:0.75; }
   .ms-row canvas { flex:none; }
   .pb-card .ms-row canvas { width:44px; height:44px; }
   .ms-tx { display:flex; flex-direction:column; gap:2px; font-family:-apple-system,'Segoe UI',sans-serif; font-size:12px; line-height:1.4; color:#9a9f9f; }
@@ -274,7 +275,7 @@
   .ms-trip { display:flex; justify-content:space-between; align-items:center; min-height:44px; padding:0 12px; border-radius:8px; cursor:pointer; color:#d5dada; background:rgba(255,255,255,0.04); border:1px solid #3a3f3f;
     font-family:-apple-system,'Segoe UI',sans-serif; font-size:14px; }
   .ms-trip b { font-family:'Special Elite',monospace; font-weight:400; color:#ffd98a; }
-  .ms-trip:disabled { color:#5e6666; cursor:default; } .ms-trip:disabled b { color:#5e6666; }
+  .ms-trip:disabled { color:#8a9292; cursor:default; } .ms-trip:disabled b { color:#8a9292; }
   .dy-list { display:flex; flex-direction:column; gap:12px; }
   .dy-row { font-family:-apple-system,'Segoe UI',sans-serif; font-size:14px; color:#d5dada; border:1px solid #2a2f2f; border-radius:8px; padding:10px; }
   .dy-row.done { opacity:0.6; }
@@ -294,9 +295,9 @@
   .sp-dust { font-size:15px; letter-spacing:0.1em; color:#ffd98a; margin-top:4px; }
   .sp-name { font-size:13px; letter-spacing:0.2em; color:#8a9090; margin-top:2px; }
   .sp-fill { align-self:stretch; display:flex; flex-direction:column; gap:12px; }
-  .sp-dots { position:absolute; left:0; right:0; bottom:calc(var(--sb) + 60px); display:flex; justify-content:center; }
-  .sp-dots button { width:30px; height:26px; background:none; border:none; padding:0; cursor:pointer; position:relative; }
-  .sp-dots button::after { content:''; position:absolute; left:11px; top:9px; width:8px; height:8px; border-radius:50%; background:#3a4242; }
+  .sp-dots { position:absolute; left:0; right:0; bottom:calc(var(--sb) + 56px); display:flex; justify-content:center; }
+  .sp-dots button { width:44px; height:44px; background:none; border:none; padding:0; cursor:pointer; position:relative; }
+  .sp-dots button::after { content:''; position:absolute; left:18px; top:18px; width:8px; height:8px; border-radius:50%; background:#3a4242; }
   .sp-dots button.on::after { background:#e8eaea; }
   #sp-lock { position:absolute; left:24px; right:24px; bottom:calc(var(--sb) + 104px); text-align:center; pointer-events:none; display:none;
     font-family:-apple-system,'Segoe UI',sans-serif; font-size:14px; line-height:1.6; color:#c8cccc; }
@@ -311,14 +312,14 @@
   .sp-done { color:#ffd98a; letter-spacing:0.1em; margin-top:4px; }
   .sp-label { font-family:'Special Elite',monospace; font-size:12px; letter-spacing:0.16em; color:#8a9090; }
   .sp-skins { display:flex; gap:6px; justify-content:center; flex-wrap:wrap; }
-  .sp-skins button { font-family:-apple-system,'Segoe UI',sans-serif; font-size:12px; min-height:34px; padding:0 10px; border-radius:6px; cursor:pointer;
+  .sp-skins button { font-family:-apple-system,'Segoe UI',sans-serif; font-size:12px; min-height:44px; padding:0 10px; border-radius:6px; cursor:pointer;
     color:#c8cccc; background:transparent; border:1px solid #3a3f3f; }
   .sp-skins button.on { color:#000; background:#e8eaea; border-color:#e8eaea; }
-  .sp-skins button:disabled { color:#5e6666; cursor:default; }
+  .sp-skins button:disabled { color:#8a9292; cursor:default; }
   .sp-bar { height:8px; border-radius:4px; background:#1c2222; overflow:hidden; margin-top:6px; }
   .sp-bar i { display:block; height:100%; background:#78e68c; }
 
-  .pb-back { font-family:'Special Elite',monospace; font-size:13px; letter-spacing:0.14em; color:#9a9f9f;
+  .pb-back { min-height:44px; font-family:'Special Elite',monospace; font-size:13px; letter-spacing:0.14em; color:#9a9f9f;
     background:none; border:1px solid #3a3f3f; border-radius:6px; padding:6px 16px; cursor:pointer; align-self:center; }
 </style>
 </head>
@@ -366,7 +367,7 @@
   <div class="ov-links">
     <span id="settings-link">SETTINGS</span>
   </div>
-  <div id="ver">v2.1</div>
+  <div id="ver"></div>
 </div></div>
 
 <script>
@@ -381,14 +382,16 @@ if('serviceWorker' in navigator){
     location.reload();
   });
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('sw.js').then(r=>{
+    // 주소에 버전을 붙여서, 버전이 바뀌면 폰이 새 오프라인 파일을 꼭 받게 함
+    navigator.serviceWorker.register('sw.js?v='+APP_VERSION, { updateViaCache:'none' }).then(r=>{
       r.update().catch(()=>{});
-      // 앱을 완전히 닫지 않고 다시 열었을 때도 새 버전 확인 (배포할 때마다 sw.js의 CACHE 번호를 올릴 것)
+      // 앱을 완전히 닫지 않고 다시 열었을 때도 새 버전 확인 (배포할 때는 version.js의 APP_VERSION만 올리면 됨)
       document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible') r.update().catch(()=>{}); });
     }).catch(()=>{});
   });
 }
 </script>
+<script src="version.js"></script>
 <script src="settings.js"></script>
 <script src="leaderboard.js"></script>
 <script src="ship.js"></script>
@@ -443,16 +446,16 @@ if('serviceWorker' in navigator){
   const BALL_R = Math.max(15, Math.min(W,H)*0.055);
   const BORDER = 2;
   const fieldArea = document.getElementById('field-area');
-  let DPR=1, SCALE=1;
+  let DPR=1, SCALE=1, DPR_MAX=2, idleDrawn=false;
   function resize(){
-    DPR = Math.min(window.devicePixelRatio||1, 2);
+    DPR = Math.min(window.devicePixelRatio||1, DPR_MAX);
     const area = fieldArea.getBoundingClientRect();
     SCALE = Math.max(0.1, Math.min((area.width-BORDER*2)/W, (area.height-BORDER*2)/H));
     fieldBox.style.width = (W*SCALE+BORDER*2)+'px';
     fieldBox.style.height = (H*SCALE+BORDER*2)+'px';
     canvas.width = Math.round(W*SCALE*DPR); canvas.height = Math.round(H*SCALE*DPR);
     ctx.setTransform(SCALE*DPR,0,0,SCALE*DPR,0,0);
-    spriteCache.clear(); bgCache=null;
+    spriteCache.clear(); bgCache=null; idleDrawn=false;
     if(queue.length) renderQueue();
   }
   function pointerPos(e){
@@ -566,6 +569,9 @@ if('serviceWorker' in navigator){
         master.gain.setValueAtTime(master.gain.value, ac.currentTime);
         master.gain.linearRampToValueAtTime(BGM_VOL[JPI.volume()], ac.currentTime+0.3);
       },
+      // 앱이 안 보일 때는 음악 타이머와 소리를 완전히 멈춤 (배터리·발열)
+      sleep(){ if(!ac) return; clearInterval(timer); timer=null; if(ac.state==='running') ac.suspend().catch(()=>{}); },
+      wake(){ if(!ac || !on) return; ac.resume().catch(()=>{}); nextBar=Math.max(nextBar, ac.currentTime+0.1); if(!timer){ timer=setInterval(loop,200); loop(); } },
       isOn(){ return on; }
     };
   })();
@@ -583,12 +589,22 @@ if('serviceWorker' in navigator){
   let bgCache=null;
   resize();
 
+  // 판번호: 같은 번호면 같은 순서로 행성·방해 요소가 나옴 (문제 생긴 판을 다시 볼 수 있게)
+  let gameSeed=0, rngState=0;
+  function rand(){
+    rngState=(rngState+0x6D2B79F5)|0;
+    let t=Math.imul(rngState^(rngState>>>15), 1|rngState);
+    t=(t+Math.imul(t^(t>>>7), 61|t))^t;
+    return ((t^(t>>>14))>>>0)/4294967296;
+  }
+  function newSeed(){ gameSeed=Date.now()%1e9; rngState=gameSeed; }
   // 난이도: 레벨 1은 6번, 그다음부터 2번씩 더
   function quotaFor(lv){ return 4+lv*2; }
-  // 중력: 움직이는 행성이 아래로 휘어 떨어짐. 레벨이 오를수록 세짐 (무거운 행성은 덜 휘게 해서 쏠 수는 있게)
-  function pullOf(tier){ return Math.min(0.03, 0.018+0.0012*(level-1))/Math.sqrt(PLANETS[tier].size); }
+  // 중력: 움직이는 행성이 아래로 휘어 떨어짐 (무거운 행성은 덜 휘게 해서 쏠 수는 있게)
+  // 레벨마다 세지게 하면 레벨 9에서 아무도 못 넘는 벽이 생겨서 일정하게 둠 (2026-11-26 시험 결과)
+  function pullOf(tier){ return 0.018/Math.sqrt(PLANETS[tier].size); }
   // 가장 작은 달부터 시작. 작은 행성은 금방, 큰 행성일수록 훨씬 늦게 나옴
-  const UNLOCK=[1,2,3,5,7,9,11,13,15,18];
+  const UNLOCK=[1,2,3,5,6,7,8,9,11,13];
   function maxTier(){ let t=0; while(t+1<UNLOCK.length && UNLOCK[t+1]<=level) t++; return t; }
   // 큰 행성일수록 조금 더 자주 나옴 (판이 더 빨리 참). 태양은 너무 커서 보통 확률 그대로
   function tierWeight(t){ return t===PLANETS.length-1 ? 1 : 1 + 0.5*t; }
@@ -596,7 +612,7 @@ if('serviceWorker' in navigator){
     const top=maxTier();
     let sum=0;
     for(let t=0;t<=top;t++) sum+=tierWeight(t);
-    let r=Math.random()*sum;
+    let r=rand()*sum;
     for(let t=0;t<=top;t++){ r-=tierWeight(t); if(r<0) return t; }
     return top;
   }
@@ -672,24 +688,53 @@ if('serviceWorker' in navigator){
   }
 
   // ── 진행 중 게임 자동 저장/복원 ──
-  const SAVE_KEY='pb-save';
+  const SAVE_KEY='pb-save'; let saveCount=0;
   function saveProgress(){
     if(!running) return;
     PBSpace.save(); PBDaily.save();
     try{
-      const data={ balls, level, popped, until, queue, ballSeq, record, fw:W, fh:H, gd:gameDust, sh:shields, sg:shipsThisGame, jk:junk };
+      // 소수점은 3자리까지만 (저장 크기를 줄여 폰이 더 빨리·자주 디스크에 씀)
+      const r3=v=>Math.round(v*1000)/1000;
+      const slim=balls.map(b=>({ id:b.id, x:r3(b.x), y:r3(b.y), vx:r3(b.vx), vy:r3(b.vy), tier:b.tier, r:r3(b.r), armed:b.armed, dead:b.dead }));
+      const data={ sv:SAVE_VERSION, seed:gameSeed, rs:rngState, balls:slim, level, popped, until, queue, ballSeq, record, fw:W, fh:H, gd:gameDust, sh:shields, sg:shipsThisGame, jk:junk, ev:saveEvents() };
+      // 바로 앞 저장본을 남겨 둠 (새 저장이 깨지면 그걸로 되찾음)
+      // 앞 저장본은 다섯 번에 한 번만 남김 (매번 두 벌씩 쓰면 저장이 느려짐)
+      if(++saveCount%5===1){ const old=localStorage.getItem(SAVE_KEY); if(old && validSave(parseSave(old))) localStorage.setItem(SAVE_KEY+'-prev', old); }
       localStorage.setItem(SAVE_KEY, JSON.stringify(data));
     }catch(e){}
   }
-  function clearProgress(){ try{ localStorage.removeItem(SAVE_KEY); }catch(e){} }
+  function clearProgress(){ try{ localStorage.removeItem(SAVE_KEY); localStorage.removeItem(SAVE_KEY+'-prev'); }catch(e){} }
+  // 저장 형식 번호. 형식이 바뀌면 숫자를 올리고 migrateSave에 옮기는 법을 적음
+  const SAVE_VERSION=2;
+  function parseSave(raw){ try{ return migrateSave(JSON.parse(raw)); }catch(e){ return null; } }
+  function migrateSave(d){
+    if(!d || typeof d!=='object') return null;
+    if(!d.sv){   // 1: v2.2 전 저장 — 판번호가 없음
+      d.sv=2; d.seed=0; d.rs=0;
+    }
+    return d;
+  }
+  const okNum=(v,max)=>typeof v==='number' && isFinite(v) && Math.abs(v)<=max;
+  function validSave(d){
+    return !!d && Array.isArray(d.balls) && d.balls.length<=300 && Array.isArray(d.queue) && d.queue.length>=4
+      && d.queue.every(t=>Number.isInteger(t) && t>=0 && t<PLANETS.length)
+      && d.balls.every(b=>b && Number.isInteger(b.tier) && b.tier>=0 && b.tier<PLANETS.length && okNum(b.x,1e4) && okNum(b.y,1e4) && okNum(b.vx,1e3) && okNum(b.vy,1e3))
+      && okNum(d.level,1e4) && d.level>=1 && okNum(d.popped,1e7);
+  }
   function loadProgress(){
     try{
-      const raw=localStorage.getItem(SAVE_KEY);
-      if(!raw) return null;
-      const d=JSON.parse(raw);
-      if(!d || !Array.isArray(d.balls) || !Array.isArray(d.queue) || d.queue.length<4) return null;
-      return d;
-    }catch(e){ return null; }
+      for(const key of [SAVE_KEY, SAVE_KEY+'-prev']){
+        const raw=localStorage.getItem(key);
+        if(!raw) continue;
+        const d=parseSave(raw);
+        if(validSave(d)){
+          // 잘 읽힌 저장은 앞 저장본으로도 남겨 둠 (다음에 깨져도 되찾을 수 있게)
+          if(key===SAVE_KEY && !localStorage.getItem(SAVE_KEY+'-prev')) localStorage.setItem(SAVE_KEY+'-prev', raw);
+          return d;
+        }
+      }
+    }catch(e){}
+    return null;
   }
   function restoreGame(d){
     balls=d.balls||[]; particles=d.particles||[];
@@ -706,14 +751,17 @@ if('serviceWorker' in navigator){
       }
     }
     pairCooldown.clear(); running=true;
-    resetEvents(); restoreJunk(d.jk); gameDust=d.gd||0; dailyWon=0; shipsThisGame=d.sg||0;
+    gameSeed=Number(d.seed)||0; if(!gameSeed) newSeed();
+    resetEvents(); restoreJunk(d.jk); restoreEvents(d.ev); gameDust=d.gd||0;
+    // 난수 상태는 맨 마지막에 되돌림 (resetEvents가 난수를 써서 순서가 달라지지 않게)
+    if(d.rs) rngState=Number(d.rs)|0; dailyWon=0; shipsThisGame=d.sg||0;
     shields=typeof d.sh==='number' ? d.sh : PBSpace.shields()+PBShip.extraShields();
     renderQueue(); updateHUD();
   }
 
   function newGame(){
     balls=[]; particles=[]; pairCooldown.clear();
-    resetEvents(); gameDust=0; dailyWon=0; shipsThisGame=0; shields=PBSpace.shields()+PBShip.extraShields();
+    newSeed(); resetEvents(); gameDust=0; dailyWon=0; shipsThisGame=0; shields=PBSpace.shields()+PBShip.extraShields();
     level=1; popped=0; until=quotaFor(1);
     queue=[]; refillQueue();
     running=true;
@@ -796,7 +844,7 @@ if('serviceWorker' in navigator){
 
   // ───────── 지나가는 우주선 · 후반 방해 요소 ─────────
   let dropIn=3;                   // 몇 번 더 쏘면 위에서 행성이 하나 떨어지는지
-  let sinkLeft=0, sinkBefore=0;   // 중력: 남은 거리, 이 번호보다 먼저 쏜 행성만 내려감
+  let sinkLeft=0, sinkBefore=0, liftLeft=0;   // liftLeft: 박치기할 때마다 판 전체가 조금 올라감 (잘할수록 오래 버팀)   // 중력: 남은 거리, 이 번호보다 먼저 쏜 행성만 내려감
   let flyer=null, flyerIn=6, flyersThisLevel=0;
   // 방해 요소: 레벨이 오를수록 종류와 수가 늘어남
   //  LV3 우주 쓰레기(막음) → LV5 우주돌(날아와 밀어냄) → LV7 블랙홀(끌어당겨 아래로 내던짐) → LV9 태양 폭풍
@@ -806,7 +854,7 @@ if('serviceWorker' in navigator){
   function holeMax(){ return level<7 ? 0 : Math.min(3, 1+Math.floor((level-7)/4)); }
   function sinkPerShot(){ return Math.min(20, 4+2*(level-1)); }
   function resetEvents(){
-    sinkLeft=0; dropIn=3; flyer=null; flyerIn=5+Math.floor(Math.random()*4); flyersThisLevel=0; toast=null;
+    sinkLeft=0; liftLeft=0; dropIn=3; flyer=null; flyerIn=5+Math.floor(rand()*4); flyersThisLevel=0; toast=null;
     junk=[]; roids=[]; holes=[]; flare=null; junkIn=1; roidIn=2; holeIn=2; flareIn=3; warned={};
   }
   // 저장했다 이어 해도 우주 쓰레기는 그대로 남음
@@ -815,13 +863,27 @@ if('serviceWorker' in navigator){
     junk=list.slice(0,7).map(k=>({ x:Number(k&&k.x), y:Number(k&&k.y), r:Number(k&&k.r), hp:Math.min(3,Number(k&&k.hp)), a:Number(k&&k.a)||0 }))
       .filter(k=>k.x>0 && k.x<W && k.y>0 && k.y<H && k.r>4 && k.r<20 && k.hp>0);
   }
+  // 메뉴로 나갔다 CONTINUE 해도 블랙홀·우주돌·다음 순서가 그대로 (나갔다 오면 쉬워지는 편법 막기)
+  function saveEvents(){ return { dropIn, junkIn, roidIn, holeIn, flareIn, flyerIn, flyersThisLevel, sinkLeft, liftLeft, sinkBefore, roids, holes, flare, flyer }; }
+  function restoreEvents(e){
+    if(!e || typeof e!=='object') return;
+    const n=(v,d,max)=>typeof v==='number' && isFinite(v) && Math.abs(v)<=max ? v : d;
+    dropIn=n(e.dropIn,dropIn,999); junkIn=n(e.junkIn,junkIn,999); roidIn=n(e.roidIn,roidIn,999); holeIn=n(e.holeIn,holeIn,999); flareIn=n(e.flareIn,flareIn,999);
+    flyerIn=n(e.flyerIn,flyerIn,999); flyersThisLevel=n(e.flyersThisLevel,0,9); sinkLeft=n(e.sinkLeft,0,200); liftLeft=n(e.liftLeft,0,500); sinkBefore=n(e.sinkBefore,0,1e9);
+    const obj=(o,keys)=>o && typeof o==='object' && keys.every(k=>typeof o[k]==='number' && isFinite(o[k]) && Math.abs(o[k])<1e5);
+    if(Array.isArray(e.roids)) roids=e.roids.slice(0,6).filter(k=>obj(k,['x','y','vx','vy','r','hp','a'])).map(k=>({x:k.x,y:k.y,vx:k.vx,vy:k.vy,r:Math.min(24,k.r),hp:k.hp,a:k.a}));
+    if(Array.isArray(e.holes)) holes=e.holes.slice(0,3).filter(z=>obj(z,['x','y','t','life'])).map(z=>({x:z.x,y:z.y,t:z.t,life:Math.min(2000,z.life)}));
+    if(obj(e.flare,['t'])) flare={ t:e.flare.t };
+    if(obj(e.flyer,['x','y0','y','v','t','dir']) && PBSpace.SHIP_IDS.includes(e.flyer.id)) flyer={ id:e.flyer.id, dir:e.flyer.dir>0?1:-1, x:e.flyer.x, y0:e.flyer.y0, y:e.flyer.y, v:e.flyer.v, t:e.flyer.t };
+    warned={ junk:true, roid:true, hole:true, flare:true, drop:true };
+  }
   function warn(key, text, color){ if(warned[key]) return; warned[key]=true; toast={ text, color, life:1.2 }; }
   // 쏠 때마다 세어서 우주선과 방해 요소가 나옴
   // 위에서 새 행성이 하나 떨어짐 (지금 레벨에 나오는 종류)
   function dropOne(){
     const t=randTier(), r=radiusOf(t);
     for(let n=0;n<20;n++){
-      const x=r+Math.random()*(W-2*r), y=r+4;
+      const x=r+rand()*(W-2*r), y=r+4;
       if(balls.some(b=>Math.hypot(b.x-x,b.y-y)<b.r+r+2)) continue;
       balls.push({ id:ballSeq++, x, y, vx:0, vy:2, tier:t, r, armed:true, dead:false });
       sparks(x, y, PLANETS[t].color, 8, 1.4); warn('drop','INCOMING PLANET','#9fc4ff'); sound(300,0.15,'sine',0.1);
@@ -831,7 +893,7 @@ if('serviceWorker' in navigator){
   function onShot(firedId){
     if(--dropIn<=0){ dropOne(); dropIn=Math.max(2, 4-Math.floor((level-1)/3)); }
     sinkLeft+=sinkPerShot(); sinkBefore=firedId;
-    if(!flyer && flyersThisLevel<3 && --flyerIn<=0){ spawnFlyer(); flyerIn=6+Math.floor(Math.random()*5); }
+    if(!flyer && flyersThisLevel<3 && --flyerIn<=0){ spawnFlyer(); flyerIn=6+Math.floor(rand()*5); }
     if(junk.length<junkMax() && --junkIn<=0){ spawnJunk(); junkIn=level>=10 ? 1 : 2; }
     if(level>=5 && --roidIn<=0){ for(let i=roids.length;i<roidMax();i++) spawnRoid(); roidIn=Math.max(2, 5-Math.floor((level-5)/3)); }
     if(holes.length<holeMax() && --holeIn<=0){ spawnHole(); holeIn=Math.max(2, 5-Math.floor((level-7)/3)); }
@@ -839,32 +901,36 @@ if('serviceWorker' in navigator){
   }
   function spawnJunk(){
     for(let n=0;n<30;n++){
-      const x=30+Math.random()*(W-60), y=110+Math.random()*320, r=10+Math.random()*4;
+      const x=30+rand()*(W-60), y=110+rand()*320, r=10+rand()*4;
       if(balls.some(b=>Math.hypot(b.x-x,b.y-y)<b.r+r+8) || junk.some(k=>Math.hypot(k.x-x,k.y-y)<52)) continue;
-      junk.push({ x, y, r, hp:level>=8 ? 3 : 2, a:Math.random()*6 });
+      junk.push({ x, y, r, hp:level>=8 ? 3 : 2, a:rand()*6 });
       warn('junk','SPACE JUNK','#b8c0c6'); return;
     }
   }
   function spawnRoid(){
-    const dir=Math.random()<0.5 ? 1 : -1, sp=1.3+Math.random()*0.7+Math.min(0.8,(level-5)*0.08);
-    roids.push({ x:dir>0 ? -24-Math.random()*60 : W+24+Math.random()*60, y:50+Math.random()*190, vx:dir*sp, vy:0.25+Math.random()*0.5, r:12+Math.random()*Math.min(8,level*0.5), hp:3, a:0 });
+    const dir=rand()<0.5 ? 1 : -1, sp=1.3+rand()*0.7+Math.min(0.8,(level-5)*0.08);
+    roids.push({ x:dir>0 ? -24-rand()*60 : W+24+rand()*60, y:50+rand()*190, vx:dir*sp, vy:0.25+rand()*0.5, r:12+rand()*Math.min(8,level*0.5), hp:3, a:0 });
     warn('roid','ASTEROIDS!','#d0a27a');
   }
   function spawnHole(){
     for(let n=0;n<20;n++){
-      const x=W*(0.2+Math.random()*0.6), y=H*(0.2+Math.random()*0.32);
+      const x=W*(0.2+rand()*0.6), y=H*(0.2+rand()*0.32);
       if(holes.some(z=>Math.hypot(z.x-x,z.y-y)<150)) continue;
       holes.push({ x, y, t:0, life:900+Math.min(600,level*30) });
       warn('hole','BLACK HOLE','#b79cff'); return;
     }
   }
   function spawnFlyer(){
-    const id=PBSpace.SHIP_IDS[Math.floor(Math.random()*PBSpace.SHIP_IDS.length)];
-    const dir=Math.random()<0.5 ? 1 : -1, fast=id==='halley';
-    flyer={ id, dir, x:dir>0?-30:W+30, y0:80+Math.random()*190, y:0, v:(fast?1.9:1.1), t:0 };
+    const id=PBSpace.SHIP_IDS[Math.floor(rand()*PBSpace.SHIP_IDS.length)];
+    const dir=rand()<0.5 ? 1 : -1, fast=id==='halley';
+    flyer={ id, dir, x:dir>0?-30:W+30, y0:80+rand()*190, y:0, v:(fast?1.9:1.1), t:0 };
     flyer.y=flyer.y0; flyersThisLevel++;
   }
   function eventStep(){
+    if(liftLeft>0){
+      const d=Math.min(0.8, liftLeft); liftLeft-=d;
+      for(const b of balls) if(b.armed) b.y=Math.max(b.r, b.y-d);
+    }
     if(sinkLeft>0){
       const d=Math.min(0.6, sinkLeft); sinkLeft-=d;
       for(const b of balls) if(b.armed && b.id<sinkBefore) b.y+=d;
@@ -911,7 +977,7 @@ if('serviceWorker' in navigator){
         if(b.dead || !b.armed || Math.hypot(b.vx,b.vy)<0.6) continue;
         const dx=z.x-b.x, dy=z.y-b.y, d=Math.hypot(dx,dy);
         if(d>140) continue;
-        if(d<16){ const a=Math.PI*(0.3+Math.random()*0.4), v=6.5/Math.sqrt(PLANETS[b.tier].size); b.vx=Math.cos(a)*v; b.vy=Math.sin(a)*v; b.x=z.x+Math.cos(a)*22; b.y=z.y+Math.sin(a)*22; sound(180,0.2,'sine',0.12); continue; }
+        if(d<16){ const a=Math.PI*(0.3+rand()*0.4), v=6.5/Math.sqrt(PLANETS[b.tier].size); b.vx=Math.cos(a)*v; b.vy=Math.sin(a)*v; b.x=z.x+Math.cos(a)*22; b.y=z.y+Math.sin(a)*22; sound(180,0.2,'sine',0.12); continue; }
         const a=0.04+pull*(1-d/140);
         b.vx+=dx/d*a; b.vy+=dy/d*a;
       }
@@ -1069,7 +1135,7 @@ if('serviceWorker' in navigator){
               const col=PLANETS[a.tier].color;
               sparks((a.x+c.x)/2, (a.y+c.y)/2, col, 16, 2.6);
               sparks((a.x+c.x)/2, (a.y+c.y)/2, '#ffffff', 6, 1.8);
-              bonkDust(a.tier);
+              bonkDust(a.tier); liftLeft+=8;
               popped+=PBShip.bonkScore();   // 우주선 단계마다 박치기 덤 점수
               shrink(a); shrink(c);
               if(dist>0.0001){
@@ -1146,7 +1212,7 @@ if('serviceWorker' in navigator){
           if(dist<sep){
             any=true;
             let nx, ny;
-            if(dist<0.0001){ const ra=Math.random()*Math.PI*2; nx=Math.cos(ra); ny=Math.sin(ra); dist=0.0001; }
+            if(dist<0.0001){ const ra=rand()*Math.PI*2; nx=Math.cos(ra); ny=Math.sin(ra); dist=0.0001; }
             else { nx=dx/dist; ny=dy/dist; }
             const overlap=Math.max(0,(sep-dist))/2;
             a.x-=nx*overlap; a.y-=ny*overlap;
@@ -1164,6 +1230,9 @@ if('serviceWorker' in navigator){
   // ───────── 그리기 ─────────
   function drawHUD(){
     ctx.save();
+    // 판번호 (문제 생긴 판을 알려줄 때 쓰는 번호)
+    ctx.globalAlpha=0.3; ctx.fillStyle='#8a9090'; ctx.font='11px "Special Elite", monospace'; ctx.textAlign='left'; ctx.textBaseline='top';
+    ctx.fillText('GAME #'+gameSeed, 8, 8);
     ctx.globalAlpha=0.42;
     ctx.fillStyle='#5e6363';
     ctx.textAlign='center';
@@ -1433,8 +1502,9 @@ if('serviceWorker' in navigator){
     if(ring) drawRing(c,r,ring,'back');
     c.save(); circlePath(c,r); c.clip(); c.drawImage(surf,-r,-r,r*2,r*2); c.restore();
     if(ATMO[tier]){
-      c.save(); c.strokeStyle=ATMO[tier]; c.lineWidth=r*0.07; c.shadowColor=ATMO[tier]; c.shadowBlur=r*0.3;
-      circlePath(c,r*0.98); c.stroke(); c.restore();
+      // 대기: 흐림 대신 넓고 옅은 테두리를 한 번 더 그림 (흐림은 폰을 뜨겁게 함)
+      c.save(); c.strokeStyle=ATMO[tier]; c.globalAlpha=0.35; c.lineWidth=r*0.2; circlePath(c,r*1.02); c.stroke();
+      c.globalAlpha=1; c.lineWidth=r*0.07; circlePath(c,r*0.98); c.stroke(); c.restore();
     }
     if(ring) drawRing(c,r,ring,'front');
   }
@@ -1514,7 +1584,7 @@ if('serviceWorker' in navigator){
     ctx.strokeStyle=fade;
     ctx.lineWidth=2;
     ctx.shadowColor='rgba(255,255,255,0.8)';
-    ctx.shadowBlur=6;
+    ctx.shadowBlur=0;
     ctx.beginPath();
     ctx.moveTo(lp.x, lp.y);
     ctx.lineTo(lp.x+dx/mag*ext, lp.y+dy/mag*ext);
@@ -1546,7 +1616,7 @@ if('serviceWorker' in navigator){
     ctx.fillStyle='#e8eaea';
     ctx.font=Math.min(W*0.12,44)+'px "Special Elite", monospace';
     ctx.textAlign='center';
-    ctx.shadowColor='#fff'; ctx.shadowBlur=16;
+    ctx.shadowBlur=0;
     ctx.fillText('LEVEL '+level, W/2, H*0.5);
     if(level>1 && UNLOCK.includes(level)){
       ctx.font=Math.min(W*0.06,22)+'px "Special Elite", monospace';
@@ -1566,7 +1636,7 @@ if('serviceWorker' in navigator){
     ctx.globalAlpha=Math.min(1, toast.life*3);
     ctx.font='20px "Special Elite", monospace';
     ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillStyle=toast.color; ctx.shadowColor=toast.color; ctx.shadowBlur=8;
+    ctx.fillStyle=toast.color;
     ctx.fillText(toast.text, W/2, 40);
     ctx.restore();
   }
@@ -1646,8 +1716,36 @@ if('serviceWorker' in navigator){
     frameAcc = Math.min(Math.max(frameAcc - STEP_MS, 0), STEP_MS);
     return true;
   }
+  // 쉬기: 첫 페이지는 바뀔 게 없어서 한 번만 그림, MY SPACE가 덮고 있으면 안 그림, 카드 등으로 멈췄을 땐 1초에 10번만
+  let pauseTick=0, slowT=0, slowN=0, lastT=0;
+  function calm(){
+    if(flyer || roids.length || flare || particles.length || toast || flashLevel>0 || sinkLeft>0 || liftLeft>0) return false;
+    for(const b of balls) if(b.vx!==0 || b.vy!==0) return false;
+    return true;
+  }
+  function resting(){
+    if(document.getElementById('space').classList.contains('on')) return true;
+    // 첫 페이지·게임 오버: 움직이는 게 없으므로 한 번 그리고 쉼
+    if(!running && !overlay.classList.contains('hidden')){ if(idleDrawn) return true; idleDrawn=true; return false; }
+    idleDrawn=false;
+    if(running && JPI.isOpen()) return (++pauseTick)%6!==0;
+    // 아무것도 움직이지 않으면(행성 자전만) 1초에 20번만
+    if(running && !aiming && calm()) return (++pauseTick)%3!==0;
+    return false;
+  }
+  // 느린 폰: 한 장 그리는 데 오래 걸리는 상태가 계속되면 해상도를 낮춤
+  function watchSpeed(t){
+    const dt=t-lastT; lastT=t;
+    if(dt>0 && dt<200 && running && !JPI.isOpen()){ slowT+=dt; slowN++; }
+    if(slowN>=120){
+      if(slowT/slowN>26 && DPR_MAX>1){ DPR_MAX=Math.max(1, DPR_MAX-0.5); resize(); }
+      slowT=0; slowN=0;
+    }
+  }
   function loop(t){
-    if(frameDue(t === undefined ? performance.now() : t)){
+    const now=t === undefined ? performance.now() : t;
+    if(frameDue(now) && !resting()){
+      watchSpeed(now);
       drawBackground();
       // 메뉴 화면이 떠 있을 때는 뒤에 비치는 숫자(LEVEL 등)를 그리지 않음
       if(overlay.classList.contains('hidden')) drawHUD();
@@ -1713,7 +1811,10 @@ if('serviceWorker' in navigator){
   }
 
   // 앱을 끄거나 뒤로 가는 등 화면을 벗어날 때 즉시 저장
-  document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden') saveProgress(); });
+  document.addEventListener('visibilitychange', ()=>{
+    if(document.visibilityState==='hidden'){ saveProgress(); bgm.sleep(); }
+    else bgm.wake();
+  });
   window.addEventListener('pagehide', saveProgress);
   window.addEventListener('beforeunload', saveProgress);
 
@@ -1724,7 +1825,7 @@ if('serviceWorker' in navigator){
     'Bonk two Moons together and they vanish.',
     'Bigger planets are heavier: they fly slower and are harder to push.',
     'You start with the Moon. Every time a planet shrinks, UNTIL NEXT LEVEL drops by 1. At 0 you level up. Bigger planets join at later levels.',
-    'Gravity bends your shots down and pulls every planet lower after each shot. It gets stronger every level.',
+    'Gravity bends your shots down and pulls every planet lower after each shot, more at higher levels. Every bonk lifts them back up a little.',
     'New planets also drop in from the top every few shots.',
     'If a planet goes all the way past the bottom line, the game is over. A red ring means danger.',
     'Bonk planets to earn Stardust, then spend it in MY SPACE to grow your planets.',
@@ -1750,7 +1851,7 @@ if('serviceWorker' in navigator){
   });
   backBtn.addEventListener('click', showMenu);
   const HELP_ITEM={ title:'HOW TO PLAY', lines:HELP };
-  document.getElementById('settings-link').addEventListener('click', ()=>JPI.openSettings(onSettingChange, HELP_ITEM, [{ title:'BACKUP', run:()=>PBBackup.open(()=>{ PBSpace.save(); PBDaily.save(); }) }]));
+  document.getElementById('settings-link').addEventListener('click', ()=>JPI.openSettings(onSettingChange, HELP_ITEM, [{ title:"WHAT'S NEW", run:openLog }, { title:'BACKUP', run:()=>PBBackup.open(()=>{ PBSpace.save(); PBDaily.save(); }) }]));
   function goMenu(){
     if(!running) return;
     aiming=false;
@@ -2160,6 +2261,14 @@ if('serviceWorker' in navigator){
   window.addEventListener('resize', fitOverlay);
   if(document.fonts) document.fonts.ready.then(fitOverlay);
 
+  document.getElementById('ver').textContent='v'+APP_VERSION;
+  (function warm(t){ setTimeout(()=>{ if(t>=PLANETS.length) return; if(!running) texture(t); warm(running ? t : t+1); }, t ? 150 : 1500); })(0);
+  // 업데이트 기록 (SETTINGS → WHAT'S NEW)
+  function openLog(){
+    const box=document.createElement('div'); box.className='jpi-help';
+    for(const [d,v,t] of APP_LOG){ const p=document.createElement('p'); p.textContent='v'+v+'  ·  '+d+'\n'+t; p.style.whiteSpace='pre-line'; box.appendChild(p); }
+    JPI.modal("WHAT'S NEW", box);
+  }
   // 시작 시: 저장본 있으면 '이어하기' 메뉴 표시
   showMenu();
 })();

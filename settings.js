@@ -1,6 +1,15 @@
 // Planet Bonk — 설정(배경음악·효과음·진동)과 안내 창
 (function(){
   const KEYS = { music:'pb-music', sfx:'pb-sfx', vibe:'pb-vibe' };
+  // 같은 곳을 0.3초 안에 또 누르면 무시 (빠르게 여러 번 눌러 두 번 사거나 창이 겹쳐 뜨는 것 방지)
+  let lastTap={ x:-99, y:-99, t:-1e9 };
+  document.addEventListener('click', e=>{
+    if(!e.isTrusted) return;
+    const now=performance.now();
+    if(now-lastTap.t<300 && Math.abs(e.clientX-lastTap.x)<24 && Math.abs(e.clientY-lastTap.y)<24){ e.stopImmediatePropagation(); e.preventDefault(); return; }
+    lastTap={ x:e.clientX, y:e.clientY, t:now };
+  }, true);
+
   function on(name){ try{ return localStorage.getItem(KEYS[name])!=='off'; }catch(e){ return true; } }
   function set(name, val){ try{ localStorage.setItem(KEYS[name], val?'on':'off'); }catch(e){} }
 
@@ -29,19 +38,19 @@
   .jpi-list{display:flex;flex-direction:column;gap:12px;}
   .jpi-row{display:flex;justify-content:space-between;align-items:center;
     font-family:-apple-system,'Apple SD Gothic Neo',sans-serif;font-size:15px;color:#c8cccc;}
-  .jpi-toggle{font-family:'Special Elite',monospace;font-size:14px;letter-spacing:0.12em;min-width:80px;
+  .jpi-toggle{min-height:44px;font-family:'Special Elite',monospace;font-size:14px;letter-spacing:0.12em;min-width:80px;
     padding:7px 12px;border-radius:6px;border:1px solid #3a3f3f;background:transparent;color:#7a8080;cursor:pointer;}
   .jpi-toggle.on{color:#000;background:#e8eaea;border-color:#e8eaea;box-shadow:0 0 10px rgba(255,255,255,0.35);}
   .jpi-toggle:disabled{cursor:default;font-family:-apple-system,'Apple SD Gothic Neo',sans-serif;
-    font-size:12px;letter-spacing:0;color:#5e6363;}
+    font-size:12px;letter-spacing:0;color:#8a9292;}
   .jpi-help{font-family:-apple-system,'Apple SD Gothic Neo',sans-serif;font-size:14px;line-height:1.65;
     color:#c8cccc;display:flex;flex-direction:column;gap:9px;}
   .jpi-help p{position:relative;padding-left:14px;}
   .jpi-help p::before{content:'•';position:absolute;left:0;color:#6c7171;}
-  .jpi-close{align-self:center;font-family:'Special Elite',monospace;font-size:15px;letter-spacing:0.16em;
+  .jpi-close{min-height:44px;align-self:center;font-family:'Special Elite',monospace;font-size:15px;letter-spacing:0.16em;
     color:#000;background:#e8eaea;border:none;border-radius:4px;padding:9px 30px;cursor:pointer;
     box-shadow:0 0 14px rgba(255,255,255,0.35);}
-  .jpi-extra{margin-top:6px;font-family:'Special Elite',monospace;font-size:14px;letter-spacing:0.14em;
+  .jpi-extra{min-height:44px;margin-top:6px;font-family:'Special Elite',monospace;font-size:14px;letter-spacing:0.14em;
     color:#c8cccc;background:transparent;border:1px solid #3a3f3f;border-radius:6px;padding:9px;cursor:pointer;}
   .jpi-close:active,.jpi-toggle:active,.jpi-extra:active{transform:translateY(1px);}
   `;

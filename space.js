@@ -188,9 +188,12 @@
   const R0=[7,8,9.5,11.5,30,14,15,15,19,21], T0=[16,22,28,34,0,42,50,58,66,76];
   let view=null, page=0, slide=0, lastS=0, raf=0, sprites=new Map();
 
+  let buildBudget=1;   // 한 장면에 새로 만드는 행성 그림 수 (한꺼번에 만들면 화면이 굳음)
   function spriteFor(b, r){
     const sk=skinOf(b.id), key=b.id, old=sprites.get(key);
     if(old && old.r===r && old.sk===sk) return old;
+    if(buildBudget<=0) return old || null;
+    buildBudget--;
     const css=r*2*(b.tier===9 ? 1.75 : api.padOf(b.tier))/0.94;
     const cv=document.createElement('canvas');
     const s={ cv, css, r, sk, draw:api.planetPainter(cv, b.tier, css, true, texFor(b,sk)) };
@@ -206,8 +209,9 @@
     const top=document.querySelector('.sp-top').getBoundingClientRect().bottom+8;
     const bottom=document.querySelector('.sp-bottom').getBoundingClientRect().top-30;
     const k=Math.max(0.6, Math.min(1.4, Math.min(vw/400, (bottom-top)/560)));
-    const bg=document.createElement('canvas'); bg.width=cv.width; bg.height=cv.height;
-    const c=bg.getContext('2d'); c.setTransform(d,0,0,d,0,0);
+    // 배경 별은 1배 해상도로 한 번만 그려 두고 늘려 씀 (크게 그리면 여는 순간 굳음)
+    const bg=document.createElement('canvas'); bg.width=Math.round(vw); bg.height=Math.round(vh);
+    const c=bg.getContext('2d');
     c.fillStyle='#03050a'; c.fillRect(0,0,vw,vh);
     const rnd=api.seeded(21);
     for(let i=0;i<190;i++){
@@ -231,6 +235,7 @@
   }
   function drawBody(c, o, s, n){
     const sp=spriteFor(o.b, o.r);
+    if(!sp){ c.fillStyle=api.rgba(api.PLANETS[o.b.tier].color,0.35); c.beginPath(); c.arc(o.x,o.y,o.r,0,Math.PI*2); c.fill(); return; }
     if((n+o.b.tier)%3===0) sp.draw(s/(api.PERIOD[o.b.tier]||40), s);
     const list=(MOONS[o.b.id]||[]).slice(0, levelOf(o.b.id)-1);
     const moons=list.map((m,i)=>{ const a=s/(4+i*2.3)*Math.PI*2+i*2, q=o.r*1.55+i*4.5*view.k; return { x:o.x+Math.cos(a)*q, y:o.y+Math.sin(a)*q*0.4, back:Math.sin(a)<0, col:m[1] }; });
@@ -322,13 +327,17 @@
     c.strokeStyle='rgba(255,200,140,0.65)'; c.lineWidth=2; c.beginPath(); c.arc(v.cx,v.cy,R*1.03,0,6.28); c.stroke();
   }
 
+  let lastFrame=0;
   function frame(now){
     if(!view) return;
     raf=requestAnimationFrame(frame);
+    // 1초에 30번만 그림 (120Hz 폰에서 120번씩 그리면 뜨거워짐)
+    if(now-lastFrame<32) return;
+    lastFrame=now;
     const s=now/1000, v=view, c=$('space-cv').getContext('2d');
-    v.n++; v.hits=[];
+    v.n++; v.hits=[]; buildBudget=1;
     slide+=(page-slide)*(1-Math.exp(-Math.min(0.1,Math.max(0,s-lastS))*11)); lastS=s; if(Math.abs(page-slide)<0.002) slide=page;
-    c.setTransform(1,0,0,1,0,0); c.drawImage(v.bg,0,0);
+    c.setTransform(1,0,0,1,0,0); c.drawImage(v.bg,0,0,v.bg.width*v.d,v.bg.height*v.d);
     for(let i=0;i<WORLDS.length;i++){
       const off=(i-slide)*v.vw;
       if(Math.abs(off)>=v.vw) continue;
